@@ -2,11 +2,13 @@
 
 Thank you for your interest in contributing! 🎉
 
-We welcome contributions of all kinds—bug reports, feature requests, code, tests, and documentation. Please read these guidelines to help us maintain a collaborative and productive environment.
+We welcome contributions of all kinds—bug reports, feature requests, code, tests, and documentation. Please read these
+guidelines to help us maintain a collaborative and productive environment.
 
 ---
 
 ## 📚 Table of Contents
+
 - [How to Contribute](#how-to-contribute)
 - [Development Setup](#development-setup)
 - [Coding Standards](#coding-standards)
@@ -19,7 +21,8 @@ We welcome contributions of all kinds—bug reports, feature requests, code, tes
 ## How to Contribute
 
 ### 1. Reporting Issues
-- Use [GitHub Issues](https://github.com/Jpisnice/shadcn-ui-mcp-server/issues) for bugs, feature requests, or questions.
+
+- Use [GitHub Issues](https://github.com/AnoRebel/shadcn-ui-mcp-server/issues) for bugs, feature requests, or questions.
 - Please include:
   - A clear, descriptive title
   - Steps to reproduce (for bugs)
@@ -27,10 +30,12 @@ We welcome contributions of all kinds—bug reports, feature requests, code, tes
   - Screenshots or logs if helpful
 
 ### 2. Suggesting Enhancements
+
 - Open an issue describing your idea and why it would be useful.
 - Be open to discussion and feedback.
 
 ### 3. Submitting Pull Requests
+
 1. **Fork the repository** and clone your fork.
 2. **Create a new branch** for your change:
    ```bash
@@ -67,6 +72,7 @@ We welcome contributions of all kinds—bug reports, feature requests, code, tes
 ---
 
 ## Coding Standards
+
 - Use [Prettier](https://prettier.io/) and [ESLint](https://eslint.org/) for formatting and linting.
 - Write clear, concise comments and documentation.
 - Keep functions and files focused and modular.
@@ -76,6 +82,7 @@ We welcome contributions of all kinds—bug reports, feature requests, code, tes
 ---
 
 ## Commit Messages
+
 - Use clear, descriptive commit messages.
 - Recommended format:
   - `Fix: short description of the fix`
@@ -89,7 +96,8 @@ We welcome contributions of all kinds—bug reports, feature requests, code, tes
 
 ## Code of Conduct
 
-We are committed to a welcoming and inclusive environment. Please be respectful, constructive, and supportive. Harassment or discrimination of any kind will not be tolerated.
+We are committed to a welcoming and inclusive environment. Please be respectful, constructive, and supportive.
+Harassment or discrimination of any kind will not be tolerated.
 
 For details, see the [Contributor Covenant](https://www.contributor-covenant.org/version/2/1/code_of_conduct/).
 
@@ -101,4 +109,4 @@ By contributing, you agree that your contributions will be licensed under the [M
 
 ---
 
-Thank you for helping make this project better! 🙏 
+Thank you for helping make this project better! 🙏

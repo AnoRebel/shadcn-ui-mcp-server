@@ -1,11 +1,11 @@
 /**
  * Resources implementation for the Model Context Protocol (MCP) server.
- * 
+ *
  * This file defines the resources that can be returned by the server based on client requests.
  * Resources are static content or dynamically generated content referenced by URIs.
  */
 
-import { logError } from './utils/logger.js';
+import { logError } from "./utils/logger.js"
 
 /**
  * Resource definitions exported to the MCP handler
@@ -13,12 +13,12 @@ import { logError } from './utils/logger.js';
  */
 export const resources = [
   {
-    name: 'get_components',
-    description: 'List of available shadcn/ui components that can be used in the project',
-    uri: 'resource:get_components',
-    contentType: 'text/plain',
-  }
-];
+    name: "get_components",
+    description: "List of available shadcn/ui components that can be used in the project",
+    uri: "resource:get_components",
+    contentType: "text/plain",
+  },
+]
 
 /**
  * Handler for the get_components resource
@@ -40,6 +40,7 @@ const getComponentsList = async () => {
       "calendar",
       "card",
       "carousel",
+      "chart",
       "checkbox",
       "collapsible",
       "command",
@@ -52,6 +53,7 @@ const getComponentsList = async () => {
       "form",
       "hover-card",
       "input",
+      "input-otp",
       "label",
       "menubar",
       "navigation-menu",
@@ -59,11 +61,13 @@ const getComponentsList = async () => {
       "popover",
       "progress",
       "radio-group",
+      "range-calendar",
       "resizable",
       "scroll-area",
       "select",
       "separator",
       "sheet",
+      "sidebar",
       "skeleton",
       "slider",
       "sonner",
@@ -98,5 +102,5 @@ const getComponentsList = async () => {
  * Each handler function returns the resource content when requested
  */
 export const resourceHandlers = {
-  'resource:get_components': getComponentsList,
-};
+  "resource:get_components": getComponentsList,
+}

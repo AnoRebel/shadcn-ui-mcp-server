@@ -1,11 +1,11 @@
 /**
  * Resource templates implementation for the Model Context Protocol (MCP) server.
- * 
+ *
  * This file defines resource templates that can be used to dynamically generate
  * resources based on parameters in the URI.
  */
 
-import { getFramework } from './utils/framework.js';
+import { getFramework } from "./utils/framework.js"
 
 /**
  * Resource template definitions exported to the MCP handler
@@ -13,24 +13,25 @@ import { getFramework } from './utils/framework.js';
  */
 export const resourceTemplates = [
   {
-    name: 'get_install_script_for_component',
-    description: 'Generate installation script for a specific shadcn/ui component based on package manager',
-    uriTemplate: 'resource-template:get_install_script_for_component?packageManager={packageManager}&component={component}',
-    contentType: 'text/plain',
+    name: "get_install_script_for_component",
+    description: "Generate installation script for a specific shadcn/ui component based on package manager",
+    uriTemplate:
+      "resource-template:get_install_script_for_component?packageManager={packageManager}&component={component}",
+    contentType: "text/plain",
   },
   {
-    name: 'get_installation_guide',
-    description: 'Get the installation guide for shadcn/ui based on build tool and package manager',
-    uriTemplate: 'resource-template:get_installation_guide?buildTool={buildTool}&packageManager={packageManager}',
-    contentType: 'text/plain',
+    name: "get_installation_guide",
+    description: "Get the installation guide for shadcn/ui based on build tool and package manager",
+    uriTemplate: "resource-template:get_installation_guide?buildTool={buildTool}&packageManager={packageManager}",
+    contentType: "text/plain",
   },
-];
+]
 
 // Create a map for easier access in getResourceTemplate
 const resourceTemplateMap = {
-  'get_install_script_for_component': resourceTemplates[0],
-  'get_installation_guide': resourceTemplates[1],
-};
+  get_install_script_for_component: resourceTemplates[0],
+  get_installation_guide: resourceTemplates[1],
+}
 
 /**
  * Extract parameters from URI
@@ -39,8 +40,8 @@ const resourceTemplateMap = {
  * @returns Parameter value or undefined
  */
 function extractParam(uri: string, paramName: string): string | undefined {
-  const match = uri.match(new RegExp(`${paramName}=([^&]+)`));
-  return match?.[1];
+  const match = uri.match(new RegExp(`${paramName}=([^&]+)`))
+  return match?.[1]
 }
 
 /**
@@ -50,308 +51,588 @@ function extractParam(uri: string, paramName: string): string | undefined {
  */
 export const getResourceTemplate = (uri: string) => {
   // Component installation script template
-  if (uri.startsWith('resource-template:get_install_script_for_component')) {
+  if (uri.startsWith("resource-template:get_install_script_for_component")) {
     return async () => {
       try {
-        const packageManager = extractParam(uri, 'packageManager');
-        const component = extractParam(uri, 'component');
-        
+        const packageManager = extractParam(uri, "packageManager")
+        const component = extractParam(uri, "component")
+
         if (!packageManager) {
-          return { 
-            content: 'Missing packageManager parameter. Please specify npm, pnpm, or yarn.', 
-            contentType: 'text/plain' 
-          };
+          return {
+            content: "Missing packageManager parameter. Please specify bun, npm, pnpm, or yarn.",
+            contentType: "text/plain",
+          }
         }
-        
+
         if (!component) {
-          return { 
-            content: 'Missing component parameter. Please specify the component name.', 
-            contentType: 'text/plain' 
-          };
+          return {
+            content: "Missing component parameter. Please specify the component name.",
+            contentType: "text/plain",
+          }
         }
-        
+
         // Get current framework and determine package name
-        const framework = getFramework();
-        const packageName = framework === 'svelte' ? 'shadcn-svelte' : 'shadcn';
-        
-        // Generate installation script based on package manager
-        let installCommand: string;
-        
-        switch (packageManager.toLowerCase()) {
-          case 'npm':
-            installCommand = `npx ${packageName}@latest add ${component} --yes --overwrite`;
-            break;
-          case 'pnpm':
-            installCommand = `pnpm dlx ${packageName}@latest add ${component} --yes --overwrite`;
-            break;
-          case 'yarn':
-            installCommand = `yarn dlx ${packageName}@latest add ${component} --yes --overwrite`;
-            break;
-          case 'bun':
-            installCommand = `bunx --bun ${packageName}@latest add ${component} --yes --overwrite`;
-            break;
-          default:
-            installCommand = `npx ${packageName}@latest add ${component} --yes --overwrite`;
+        const framework = getFramework()
+        let packageName = "shadcn-vue"
+        if (framework === "svelte") {
+          packageName = "shadcn-svelte"
+        } else if (framework === "react") {
+          packageName = "shadcn"
         }
-        
+
+        // Generate installation script based on package manager
+        let installCommand: string
+
+        switch (packageManager.toLowerCase()) {
+          case "npm":
+            installCommand = `npx ${packageName}@latest add ${component} --yes --overwrite`
+            break
+          case "pnpm":
+            installCommand = `pnpm dlx ${packageName}@latest add ${component} --yes --overwrite`
+            break
+          case "yarn":
+            installCommand = `yarn dlx ${packageName}@latest add ${component} --yes --overwrite`
+            break
+          case "bun":
+            installCommand = `bunx --bun ${packageName}@latest add ${component} --yes --overwrite`
+            break
+          default:
+            installCommand = `npx ${packageName}@latest add ${component} --yes --overwrite`
+        }
+
         return {
           content: installCommand,
-          contentType: 'text/plain',
-        };
+          contentType: "text/plain",
+        }
       } catch (error) {
         return {
           content: `Error generating installation script: ${error instanceof Error ? error.message : String(error)}`,
-          contentType: 'text/plain',
-        };
+          contentType: "text/plain",
+        }
       }
-    };
+    }
   }
-  
+
   // Installation guide template
-  if (uri.startsWith('resource-template:get_installation_guide')) {
+  if (uri.startsWith("resource-template:get_installation_guide")) {
     return async () => {
       try {
-        const buildTool = extractParam(uri, 'buildTool');
-        const packageManager = extractParam(uri, 'packageManager');
-        
+        const buildTool = extractParam(uri, "buildTool")
+        const packageManager = extractParam(uri, "packageManager")
+
         // Get current framework first since it's used in validation
-        const currentFramework = getFramework();
-        
+        const currentFramework = getFramework()
+
         if (!buildTool) {
-          return { 
-            content: currentFramework === 'svelte' 
-              ? 'Missing buildTool parameter. Available option: vite' 
-              : 'Missing buildTool parameter. Please specify next, vite, remix, etc.', 
-            contentType: 'text/plain' 
-          };
+          const getTool = () => {
+            if (currentFramework === "vue") {
+              return "Missing buildTool parameter. Available option: vite, nuxi"
+            } else if (currentFramework === "svelte") {
+              return "Missing buildTool parameter. Available option: vite"
+            } else {
+              return "Missing buildTool parameter. Please specify next, vite, remix, etc."
+            }
+          }
+          return {
+            content: getTool(),
+            contentType: "text/plain",
+          }
         }
 
         // Validate build tool for Svelte
-        if (currentFramework === 'svelte' && buildTool.toLowerCase() !== 'vite') {
+        if (currentFramework === "svelte" && buildTool.toLowerCase() !== "vite") {
           return {
             content: 'Invalid build tool for Svelte. Only "vite" is supported.',
-            contentType: 'text/plain'
-          };
+            contentType: "text/plain",
+          }
         }
-        
+
+        // Validate build tool for Vue/Nuxt
+        if (currentFramework === "vue" && (buildTool.toLowerCase() !== "vite" || buildTool.toLowerCase() !== "nuxi")) {
+          return {
+            content: 'Invalid build tool for Vue/Nuxt. Only "vite" and "nuxi" are supported.',
+            contentType: "text/plain",
+          }
+        }
+
         if (!packageManager) {
-          return { 
-            content: 'Missing packageManager parameter. Please specify npm, pnpm, or yarn.', 
-            contentType: 'text/plain' 
-          };
+          return {
+            content: "Missing packageManager parameter. Please specify bun, npm, pnpm, or yarn.",
+            contentType: "text/plain",
+          }
         }
-        
+
         // Determine package name
-        const packageName = currentFramework === 'svelte' ? 'shadcn-svelte' : 'shadcn-ui';
-        
+        let packageName = "shadcn-vue"
+        if (currentFramework === "svelte") {
+          packageName = "shadcn-svelte"
+        } else if (currentFramework === "react") {
+          packageName = "shadcn-ui"
+        }
+
         // Generate installation guide based on build tool and package manager
-        const guides = currentFramework === 'svelte'
-          ? {
-              vite: {
-                description: "Installation guide for Svelte Vite project",
-                steps: [
-                  "Create a Vite project if you don't have one already:",
-                  `${packageManager}${packageManager === 'npm' ? ' create' : ''} vite my-app -- --template svelte-ts`,
-                  "",
-                  "Navigate to your project directory:",
-                  "cd my-app",
-                  "",
-                  "Install dependencies:",
-                  packageManager === 'npm' ? `npm i && npm install -D tailwindcss @tailwindcss/vite` : 
-                  packageManager === 'pnpm' ? `pnpm i && pnpm install -D tailwindcss @tailwindcss/vite` : 
-                  packageManager === 'yarn' ? `yarn add tailwindcss @tailwindcss/vite` : 
-                  packageManager === 'bun' ? `bunx --bun install tailwindcss @tailwindcss/vite` : `npm install tailwindcss @tailwindcss/vite`,
-                  "",
-                  "The current version of Vite splits TypeScript configuration into three files, two of which need to be edited.",
-                  "Add the baseUrl and paths properties to the compilerOptions section of the tsconfig.json and tsconfig.app.json files",
-                  "\"compilerOptions\": { \"baseUrl\": \".\", \"paths\": { \"$lib\": [\"./src/lib\"], \"$lib/*\": [\"./src/lib/*\"] } }",
-                  "",
-                  "Add the following code to the tsconfig.app.json file to resolve paths, for your IDE:",
-                  "\"baseUrl\": \".\", \"paths\": { \"$lib\": [\"./src/lib\"], \"$lib/*\": [\"./src/lib/*\"] }",
-                  "",
-                  "Add the following code to the vite.config.ts so your app can resolve paths without error",
-                  "resolve: { alias: { $lib: path.resolve(\"./src/lib\"), }, },",
-                  "Make sure, the following code is added to the vite.config.ts file:",
-                  "import path from \"path\";",
-                  "",
-                  "Add the @tailwindcss/vite plugin to your Vite configuration (vite.config.ts).",
-                  "import tailwindcss from '@tailwindcss/vite'",
-                  "Make sure the following code is updated to the vite.config.ts file:",
-                  "export default defineConfig({ plugins: [ tailwindcss(), ], })",
-                  "",
-                  "Add the following code to the app.css file:",
-                  "@import \"tailwindcss\";",
-                  "",
-                  "Add shadcn/ui to your project (non-interactive):",
-                  packageManager === 'npm' ? `npx ${packageName}@latest init --overwrite --base-color slate --css src/app.css --components-alias $lib/components --lib-alias $lib/ --utils-alias $lib/utils --hooks-alias $lib/hooks --ui-alias $lib/ui` : 
-                  packageManager === 'pnpm' ? `pnpm dlx ${packageName}@latest init --overwrite --base-color slate --css src/app.css --components-alias $lib/components --lib-alias $lib/ --utils-alias $lib/utils --hooks-alias $lib/hooks --ui-alias $lib/ui` :
-                  packageManager === 'yarn' ? `yarn dlx ${packageName}@latest init --overwrite --base-color slate --css src/app.css --components-alias $lib/components --lib-alias $lib/ --utils-alias $lib/utils --hooks-alias $lib/hooks --ui-alias $lib/ui` :
-                  packageManager === 'bun' ? `bunx --bun ${packageName}@latest init --overwrite --base-color slate --css src/app.css --components-alias $lib/components --lib-alias $lib/ --utils-alias $lib/utils --hooks-alias $lib/hooks --ui-alias $lib/ui` : `npx ${packageName}@latest init --overwrite --base-color slate --css src/app.css --components-alias $lib/components --lib-alias $lib --utils-alias $lib/utils --hooks-alias $lib/hooks --ui-alias $lib/ui`,
-                  "",
-                  "The command will automatically configure your project with sensible defaults.",
-                  "",
-                  "Once initialized, you can add components:",
-                  packageManager === 'npm' ? `npx ${packageName}@latest add button --yes --overwrite` : 
-                  packageManager === 'pnpm' ? `pnpm dlx ${packageName}@latest add button --yes --overwrite` :
-                  packageManager === 'yarn' ? `yarn dlx ${packageName}@latest add button --yes --overwrite` :
-                  packageManager === 'bun' ? `bunx --bun ${packageName}@latest add button --yes --overwrite` : `npx ${packageName}@latest add button --yes --overwrite`,
-                  "",
-                  "Now you can use the component in your project!"
-                ]
-              },
-              default: {
-                description: "Generic installation guide for Svelte",
-                steps: [
-                  "Make sure you have a Svelte project set up",
-                  "",
-                  "Add shadcn/ui to your project (non-interactive):",
-                  packageManager === 'npm' ? `npx ${packageName}@latest init --overwrite --base-color slate --css src/app.css --components-alias $lib/components --lib-alias $lib/ --utils-alias $lib/utils --hooks-alias $lib/hooks --ui-alias $lib/ui` : 
-                  packageManager === 'pnpm' ? `pnpm dlx ${packageName}@latest init --overwrite --base-color slate --css src/app.css --components-alias $lib/components --lib-alias $lib/ --utils-alias $lib/utils --hooks-alias $lib/hooks --ui-alias $lib/ui` :
-                  packageManager === 'yarn' ? `yarn dlx ${packageName}@latest init --overwrite --base-color slate --css src/app.css --components-alias $lib/components --lib-alias $lib/ --utils-alias $lib/utils --hooks-alias $lib/hooks --ui-alias $lib/ui` :
-                  packageManager === 'bun' ? `bunx --bun ${packageName}@latest init --overwrite --base-color slate --css src/app.css --components-alias $lib/components --lib-alias $lib/ --utils-alias $lib/utils --hooks-alias $lib/hooks --ui-alias $lib/ui` : `npx ${packageName}@latest init --overwrite --base-color slate --css src/app.css --components-alias $lib/components --lib-alias $lib/ --utils-alias $lib/utils --hooks-alias $lib/hooks --ui-alias $lib/ui`,
-                  "",
-                  "The command will automatically configure your project with sensible defaults.",
-                  "",
-                  "Once initialized, you can add components (non-interactive):",
-                  packageManager === 'npm' ? `npx ${packageName}@latest add button --yes --overwrite` : 
-                  packageManager === 'pnpm' ? `pnpm dlx ${packageName}@latest add button --yes --overwrite` :
-                  packageManager === 'yarn' ? `yarn dlx ${packageName}@latest add button --yes --overwrite` :
-                  packageManager === 'bun' ? `bunx --bun ${packageName}@latest add button --yes --overwrite` : `npx ${packageName}@latest add button --yes --overwrite`,
-                  "",
-                  "Now you can use the component in your project!"
-                ]
-              }
-            }
-          : {
-              next: {
-                description: "Installation guide for Next.js project",
-                steps: [
-                  "Create a Next.js project if you don't have one already:",
-                  `${packageManager} create next-app my-app`,
-                  "",
-                  "Navigate to your project directory:",
-                  "cd my-app",
-                  "",
-                  "Add shadcn/ui to your project:",
-                  packageManager === 'npm' ? `npx ${packageName}@latest init` : 
-                  packageManager === 'pnpm' ? `pnpm dlx ${packageName}@latest init` :
-                  packageManager === 'yarn' ? `yarn dlx ${packageName}@latest init` :
-                  packageManager === 'bun' ? `bunx --bun ${packageName}@latest init` : `npx ${packageName}@latest init`,
-                  "",
-                  "Follow the prompts to select your preferences",
-                  "",
-                  "Once initialized, you can add components:",
-                  packageManager === 'npm' ? `npx ${packageName}@latest add button` : 
-                  packageManager === 'pnpm' ? `pnpm dlx ${packageName}@latest add button` :
-                  packageManager === 'yarn' ? `yarn dlx ${packageName}@latest add button` :
-                  packageManager === 'bun' ? `bunx --bun ${packageName}@latest add button` : `npx ${packageName}@latest add button`,
-                  "",
-                  "Now you can use the component in your project!"
-                ]
-              },
-              vite: {
-                description: "Installation guide for Vite project",
-                steps: [
-                  "Create a Vite project if you don't have one already:",
-                  `${packageManager}${packageManager === 'npm' ? ' create' : ''} vite my-app -- --template react-ts`,
-                  "",
-                  "Navigate to your project directory:",
-                  "cd my-app",
-                  "",
-                  "Install dependencies:",
-                  `${packageManager} ${packageManager === 'npm' ? 'install' : 'add'} -D tailwindcss postcss autoprefixer`,
-                  "",
-                  "Initialize Tailwind CSS:",
-                  "npx tailwindcss init -p",
-                  "",
-                  "Add shadcn/ui to your project:",
-                  packageManager === 'npm' ? `npx ${packageName}@latest init` : 
-                  packageManager === 'pnpm' ? `pnpm dlx ${packageName}@latest init` :
-                  packageManager === 'yarn' ? `yarn dlx ${packageName}@latest init` :
-                  packageManager === 'bun' ? `bunx --bun ${packageName}@latest init` : `npx ${packageName}@latest init`,
-                  "",
-                  "Follow the prompts to select your preferences",
-                  "",
-                  "Once initialized, you can add components:",
-                  packageManager === 'npm' ? `npx ${packageName}@latest add button` : 
-                  packageManager === 'pnpm' ? `pnpm dlx ${packageName}@latest add button` :
-                  packageManager === 'yarn' ? `yarn dlx ${packageName}@latest add button` :
-                  packageManager === 'bun' ? `bunx --bun ${packageName}@latest add button` : `npx ${packageName}@latest add button`,
-                  "",
-                  "Now you can use the component in your project!"
-                ]
-              },
-              remix: {
-                description: "Installation guide for Remix project",
-                steps: [
-                  "Create a Remix project if you don't have one already:",
-                  `${packageManager === 'npm' ? 'npx' : packageManager === 'pnpm' ? 'pnpm dlx' : packageManager === 'yarn' ? 'yarn dlx' : 'bunx'} create-remix my-app`,
-                  "",
-                  "Navigate to your project directory:",
-                  "cd my-app",
-                  "",
-                  "Install dependencies:",
-                  `${packageManager} ${packageManager === 'npm' ? 'install' : 'add'} -D tailwindcss postcss autoprefixer`,
-                  "",
-                  "Initialize Tailwind CSS:",
-                  "npx tailwindcss init -p",
-                  "",
-                  "Add shadcn/ui to your project:",
-                  packageManager === 'npm' ? `npx ${packageName}@latest init` : 
-                  packageManager === 'pnpm' ? `pnpm dlx ${packageName}@latest init` :
-                  packageManager === 'yarn' ? `yarn dlx ${packageName}@latest init` :
-                  packageManager === 'bun' ? `bunx --bun ${packageName}@latest init` : `npx ${packageName}@latest init`,
-                  "",
-                  "Follow the prompts to select your preferences",
-                  "",
-                  "Once initialized, you can add components:",
-                  packageManager === 'npm' ? `npx ${packageName}@latest add button` : 
-                  packageManager === 'pnpm' ? `pnpm dlx ${packageName}@latest add button` :
-                  packageManager === 'yarn' ? `yarn dlx ${packageName}@latest add button` :
-                  packageManager === 'bun' ? `bunx --bun ${packageName}@latest add button` : `npx ${packageName}@latest add button`,
-                  "",
-                  "Now you can use the component in your project!"
-                ]
-              },
-              default: {
-                description: "Generic installation guide for React",
-                steps: [
-                  "Make sure you have a React project set up",
-                  "",
-                  "Add shadcn/ui to your project:",
-                  packageManager === 'npm' ? `npx ${packageName}@latest init` : 
-                  packageManager === 'pnpm' ? `pnpm dlx ${packageName}@latest init` :
-                  packageManager === 'yarn' ? `yarn dlx ${packageName}@latest init` :
-                  packageManager === 'bun' ? `bunx --bun ${packageName}@latest init` : `npx ${packageName}@latest init`,
-                  "",
-                  "Follow the prompts to select your preferences",
-                  "",
-                  "Once initialized, you can add components:",
-                  packageManager === 'npm' ? `npx ${packageName}@latest add button` : 
-                  packageManager === 'pnpm' ? `pnpm dlx ${packageName}@latest add button` :
-                  packageManager === 'yarn' ? `yarn dlx ${packageName}@latest add button` :
-                  packageManager === 'bun' ? `bunx --bun ${packageName}@latest add button` : `npx ${packageName}@latest add button`,
-                  "",
-                  "Now you can use the component in your project!"
-                ]
-              }
-            };
-        
+        let guides: Record<string, { description: string; steps: string[] }> = {}
+        if (currentFramework === "vue") {
+          guides = {
+            nuxi: {
+              description: "Installation guide for Nuxt project",
+              steps: [
+                "Create a Nuxt project if you don't have one already:",
+                `${packageManager} create nuxt@latest my-app`,
+                "",
+                "Navigate to your project directory:",
+                "cd my-app",
+                "",
+                "Install dependencies:",
+                packageManager === "npm"
+                  ? `npm i && npm install -D tailwindcss @tailwindcss/vite`
+                  : packageManager === "pnpm"
+                    ? `pnpm i && pnpm install -D tailwindcss @tailwindcss/vite`
+                    : packageManager === "yarn"
+                      ? `yarn add --dev tailwindcss @tailwindcss/vite`
+                      : packageManager === "bun"
+                        ? `bun add -D tailwindcss @tailwindcss/vite`
+                        : `npm install -D tailwindcss @tailwindcss/vite`,
+                "",
+                "Add the @tailwindcss/vite plugin to your Nuxt configuration (nuxt.config.ts).",
+                "import tailwindcss from '@tailwindcss/vite'",
+                "Make sure the following code is updated to the vite.config.ts file:",
+                "export default defineNuxtConfig({ css: ['~/assets/css/tailwind.css'], vite: { plugins: [ tailwindcss(), ], }, })",
+                "",
+                "Add the following code to the assets/css/tailwind.css file:",
+                '@import "tailwindcss";',
+                "",
+                "Add shadcn/ui module to your project:",
+                packageManager === "npm"
+                  ? `npx ${packageName}@latest module add shadcn-nuxt`
+                  : packageManager === "pnpm"
+                    ? `pnpm dlx ${packageName}@latest module add shadcn-nuxt`
+                    : packageManager === "yarn"
+                      ? `yarn dlx ${packageName}@latest module add shadcn-nuxt`
+                      : packageManager === "bun"
+                        ? `bunx --bun ${packageName}@latest module add shadcn-nuxt`
+                        : `npx ${packageName}@latest module add shadcn-nuxt`,
+                "",
+                "Add a Nuxt Plugin for providing ssrWidth",
+                "Some components require a ssrWidth to be set through VueUse to avoid Hydration errors on mobile.",
+                "Add the following plugin to your Nuxt application:",
+                "For Nuxt v4: app/plugins/ssr-width.ts",
+                "For Nuxt v3: plugins/ssr-width.ts",
+                "import { provideSSRWidth } from '@vueuse/core'",
+                "export default defineNuxtPlugin((nuxtApp) => { provideSSRWidth(1024, nuxtApp.vueApp) })",
+                "",
+                "If you are initiating a new project, you need to run the command so that Nuxt generates the necessary .nuxt folder",
+                packageManager === "npm"
+                  ? `npx ${packageName}@latest prepare`
+                  : packageManager === "pnpm"
+                    ? `pnpm dlx ${packageName}@latest prepare`
+                    : packageManager === "yarn"
+                      ? `yarn dlx ${packageName}@latest prepare`
+                      : packageManager === "bun"
+                        ? `bunx --bun ${packageName}@latest prepare`
+                        : `npx ${packageName}@latest prepare`,
+                "",
+                "Initialize shadcn/ui in your project:",
+                packageManager === "npm"
+                  ? `npx ${packageName}@latest init`
+                  : packageManager === "pnpm"
+                    ? `pnpm dlx ${packageName}@latest init`
+                    : packageManager === "yarn"
+                      ? `yarn dlx ${packageName}@latest init`
+                      : packageManager === "bun"
+                        ? `bunx --bun ${packageName}@latest init`
+                        : `npx ${packageName}@latest init`,
+                "",
+                "Follow the prompts to select your preferences",
+                "",
+                "Once initialized, you can add components:",
+                packageManager === "npm"
+                  ? `npx ${packageName}@latest add button`
+                  : packageManager === "pnpm"
+                    ? `pnpm dlx ${packageName}@latest add button`
+                    : packageManager === "yarn"
+                      ? `yarn dlx ${packageName}@latest add button`
+                      : packageManager === "bun"
+                        ? `bunx --bun ${packageName}@latest add button`
+                        : `npx ${packageName}@latest add button`,
+                "",
+                "Now you can use the component in your project!",
+              ],
+            },
+            vite: {
+              description: "Installation guide for Vue Vite project",
+              steps: [
+                "Create a Vite project if you don't have one already:",
+                `${packageManager}${packageManager === "npm" ? " create" : ""} vite my-app -- --template vue-ts`,
+                "",
+                "Navigate to your project directory:",
+                "cd my-app",
+                "",
+                "Install dependencies:",
+                packageManager === "npm"
+                  ? `npm i && npm install -D tailwindcss @tailwindcss/vite`
+                  : packageManager === "pnpm"
+                    ? `pnpm i && pnpm install -D tailwindcss @tailwindcss/vite`
+                    : packageManager === "yarn"
+                      ? `yarn add --dev tailwindcss @tailwindcss/vite`
+                      : packageManager === "bun"
+                        ? `bun add -D tailwindcss @tailwindcss/vite`
+                        : `npm install -D tailwindcss @tailwindcss/vite`,
+                "",
+                "The current version of Vite splits TypeScript configuration into three files, two of which need to be edited.",
+                "Add the baseUrl and paths properties to the compilerOptions section of the tsconfig.json and tsconfig.app.json files",
+                '"compilerOptions": { "baseUrl": ".", "paths": { "@": ["./src"], "@/*": ["./src/*"] } }',
+                "",
+                "Add the following code to the tsconfig.app.json file to resolve paths, for your IDE:",
+                '"baseUrl": ".", "paths": { "@": ["./src"], "@/*": ["./src/*"] }',
+                "",
+                "Add the following code to the vite.config.ts so your app can resolve paths without error",
+                'resolve: { alias: { "@": path.resolve("./src"), }, },',
+                "Make sure, the following code is added to the vite.config.ts file:",
+                'import path from "path";',
+                "",
+                "Add the @tailwindcss/vite plugin to your Vite configuration (vite.config.ts).",
+                "import tailwindcss from '@tailwindcss/vite'",
+                "Make sure the following code is updated to the vite.config.ts file:",
+                "export default defineConfig({ plugins: [ tailwindcss(), ], })",
+                "",
+                "Add the following code to the app.css file:",
+                '@import "tailwindcss";',
+                "",
+                "Add shadcn/ui to your project (non-interactive):",
+                packageManager === "npm"
+                  ? `npx ${packageName}@latest init --overwrite --base-color slate --css src/app.css --components-alias @/components --lib-alias @/ --utils-alias @/utils --hooks-alias @/hooks --ui-alias @/ui`
+                  : packageManager === "pnpm"
+                    ? `pnpm dlx ${packageName}@latest init --overwrite --base-color slate --css src/app.css --components-alias @/components --lib-alias @/ --utils-alias @/utils --hooks-alias @/hooks --ui-alias @/ui`
+                    : packageManager === "yarn"
+                      ? `yarn dlx ${packageName}@latest init --overwrite --base-color slate --css src/app.css --components-alias @/components --lib-alias @/ --utils-alias @/utils --hooks-alias @/hooks --ui-alias @/ui`
+                      : packageManager === "bun"
+                        ? `bunx --bun ${packageName}@latest init --overwrite --base-color slate --css src/app.css --components-alias @/components --lib-alias @/ --utils-alias @/utils --hooks-alias @/hooks --ui-alias @/ui`
+                        : `npx ${packageName}@latest init --overwrite --base-color slate --css src/app.css --components-alias @/components --lib-alias @ --utils-alias @/utils --hooks-alias @/hooks --ui-alias @/ui`,
+                "",
+                "The command will automatically configure your project with sensible defaults.",
+                "",
+                "Once initialized, you can add components:",
+                packageManager === "npm"
+                  ? `npx ${packageName}@latest add button --yes --overwrite`
+                  : packageManager === "pnpm"
+                    ? `pnpm dlx ${packageName}@latest add button --yes --overwrite`
+                    : packageManager === "yarn"
+                      ? `yarn dlx ${packageName}@latest add button --yes --overwrite`
+                      : packageManager === "bun"
+                        ? `bunx --bun ${packageName}@latest add button --yes --overwrite`
+                        : `npx ${packageName}@latest add button --yes --overwrite`,
+                "",
+                "Now you can use the component in your project!",
+              ],
+            },
+            default: {
+              description: "Generic installation guide for Vue",
+              steps: [
+                "Make sure you have a Vue project set up",
+                "",
+                "Add shadcn/ui to your project (non-interactive):",
+                packageManager === "npm"
+                  ? `npx ${packageName}@latest init --overwrite --base-color slate --css src/app.css --components-alias @/components --lib-alias @/ --utils-alias @/utils --hooks-alias @/hooks --ui-alias @/ui`
+                  : packageManager === "pnpm"
+                    ? `pnpm dlx ${packageName}@latest init --overwrite --base-color slate --css src/app.css --components-alias @/components --lib-alias @/ --utils-alias @/utils --hooks-alias @/hooks --ui-alias @/ui`
+                    : packageManager === "yarn"
+                      ? `yarn dlx ${packageName}@latest init --overwrite --base-color slate --css src/app.css --components-alias @/components --lib-alias @/ --utils-alias @/utils --hooks-alias @/hooks --ui-alias @/ui`
+                      : packageManager === "bun"
+                        ? `bunx --bun ${packageName}@latest init --overwrite --base-color slate --css src/app.css --components-alias @/components --lib-alias @/ --utils-alias @/utils --hooks-alias @/hooks --ui-alias @/ui`
+                        : `npx ${packageName}@latest init --overwrite --base-color slate --css src/app.css --components-alias @/components --lib-alias @/ --utils-alias @/utils --hooks-alias @/hooks --ui-alias @/ui`,
+                "",
+                "The command will automatically configure your project with sensible defaults.",
+                "",
+                "Once initialized, you can add components (non-interactive):",
+                packageManager === "npm"
+                  ? `npx ${packageName}@latest add button --yes --overwrite`
+                  : packageManager === "pnpm"
+                    ? `pnpm dlx ${packageName}@latest add button --yes --overwrite`
+                    : packageManager === "yarn"
+                      ? `yarn dlx ${packageName}@latest add button --yes --overwrite`
+                      : packageManager === "bun"
+                        ? `bunx --bun ${packageName}@latest add button --yes --overwrite`
+                        : `npx ${packageName}@latest add button --yes --overwrite`,
+                "",
+                "Now you can use the component in your project!",
+              ],
+            },
+          }
+        } else if (currentFramework === "svelte") {
+          guides = {
+            vite: {
+              description: "Installation guide for Svelte Vite project",
+              steps: [
+                "Create a Vite project if you don't have one already:",
+                `${packageManager}${packageManager === "npm" ? " create" : ""} vite my-app -- --template svelte-ts`,
+                "",
+                "Navigate to your project directory:",
+                "cd my-app",
+                "",
+                "Install dependencies:",
+                packageManager === "npm"
+                  ? `npm i && npm install -D tailwindcss @tailwindcss/vite`
+                  : packageManager === "pnpm"
+                    ? `pnpm i && pnpm install -D tailwindcss @tailwindcss/vite`
+                    : packageManager === "yarn"
+                      ? `yarn add tailwindcss @tailwindcss/vite`
+                      : packageManager === "bun"
+                        ? `bunx --bun install tailwindcss @tailwindcss/vite`
+                        : `npm install tailwindcss @tailwindcss/vite`,
+                "",
+                "The current version of Vite splits TypeScript configuration into three files, two of which need to be edited.",
+                "Add the baseUrl and paths properties to the compilerOptions section of the tsconfig.json and tsconfig.app.json files",
+                '"compilerOptions": { "baseUrl": ".", "paths": { "$lib": ["./src/lib"], "$lib/*": ["./src/lib/*"] } }',
+                "",
+                "Add the following code to the tsconfig.app.json file to resolve paths, for your IDE:",
+                '"baseUrl": ".", "paths": { "$lib": ["./src/lib"], "$lib/*": ["./src/lib/*"] }',
+                "",
+                "Add the following code to the vite.config.ts so your app can resolve paths without error",
+                'resolve: { alias: { $lib: path.resolve("./src/lib"), }, },',
+                "Make sure, the following code is added to the vite.config.ts file:",
+                'import path from "path";',
+                "",
+                "Add the @tailwindcss/vite plugin to your Vite configuration (vite.config.ts).",
+                "import tailwindcss from '@tailwindcss/vite'",
+                "Make sure the following code is updated to the vite.config.ts file:",
+                "export default defineConfig({ plugins: [ tailwindcss(), ], })",
+                "",
+                "Add the following code to the app.css file:",
+                '@import "tailwindcss";',
+                "",
+                "Add shadcn/ui to your project (non-interactive):",
+                packageManager === "npm"
+                  ? `npx ${packageName}@latest init --overwrite --base-color slate --css src/app.css --components-alias $lib/components --lib-alias $lib/ --utils-alias $lib/utils --hooks-alias $lib/hooks --ui-alias $lib/ui`
+                  : packageManager === "pnpm"
+                    ? `pnpm dlx ${packageName}@latest init --overwrite --base-color slate --css src/app.css --components-alias $lib/components --lib-alias $lib/ --utils-alias $lib/utils --hooks-alias $lib/hooks --ui-alias $lib/ui`
+                    : packageManager === "yarn"
+                      ? `yarn dlx ${packageName}@latest init --overwrite --base-color slate --css src/app.css --components-alias $lib/components --lib-alias $lib/ --utils-alias $lib/utils --hooks-alias $lib/hooks --ui-alias $lib/ui`
+                      : packageManager === "bun"
+                        ? `bunx --bun ${packageName}@latest init --overwrite --base-color slate --css src/app.css --components-alias $lib/components --lib-alias $lib/ --utils-alias $lib/utils --hooks-alias $lib/hooks --ui-alias $lib/ui`
+                        : `npx ${packageName}@latest init --overwrite --base-color slate --css src/app.css --components-alias $lib/components --lib-alias $lib --utils-alias $lib/utils --hooks-alias $lib/hooks --ui-alias $lib/ui`,
+                "",
+                "The command will automatically configure your project with sensible defaults.",
+                "",
+                "Once initialized, you can add components:",
+                packageManager === "npm"
+                  ? `npx ${packageName}@latest add button --yes --overwrite`
+                  : packageManager === "pnpm"
+                    ? `pnpm dlx ${packageName}@latest add button --yes --overwrite`
+                    : packageManager === "yarn"
+                      ? `yarn dlx ${packageName}@latest add button --yes --overwrite`
+                      : packageManager === "bun"
+                        ? `bunx --bun ${packageName}@latest add button --yes --overwrite`
+                        : `npx ${packageName}@latest add button --yes --overwrite`,
+                "",
+                "Now you can use the component in your project!",
+              ],
+            },
+            default: {
+              description: "Generic installation guide for Svelte",
+              steps: [
+                "Make sure you have a Svelte project set up",
+                "",
+                "Add shadcn/ui to your project (non-interactive):",
+                packageManager === "npm"
+                  ? `npx ${packageName}@latest init --overwrite --base-color slate --css src/app.css --components-alias $lib/components --lib-alias $lib/ --utils-alias $lib/utils --hooks-alias $lib/hooks --ui-alias $lib/ui`
+                  : packageManager === "pnpm"
+                    ? `pnpm dlx ${packageName}@latest init --overwrite --base-color slate --css src/app.css --components-alias $lib/components --lib-alias $lib/ --utils-alias $lib/utils --hooks-alias $lib/hooks --ui-alias $lib/ui`
+                    : packageManager === "yarn"
+                      ? `yarn dlx ${packageName}@latest init --overwrite --base-color slate --css src/app.css --components-alias $lib/components --lib-alias $lib/ --utils-alias $lib/utils --hooks-alias $lib/hooks --ui-alias $lib/ui`
+                      : packageManager === "bun"
+                        ? `bunx --bun ${packageName}@latest init --overwrite --base-color slate --css src/app.css --components-alias $lib/components --lib-alias $lib/ --utils-alias $lib/utils --hooks-alias $lib/hooks --ui-alias $lib/ui`
+                        : `npx ${packageName}@latest init --overwrite --base-color slate --css src/app.css --components-alias $lib/components --lib-alias $lib/ --utils-alias $lib/utils --hooks-alias $lib/hooks --ui-alias $lib/ui`,
+                "",
+                "The command will automatically configure your project with sensible defaults.",
+                "",
+                "Once initialized, you can add components (non-interactive):",
+                packageManager === "npm"
+                  ? `npx ${packageName}@latest add button --yes --overwrite`
+                  : packageManager === "pnpm"
+                    ? `pnpm dlx ${packageName}@latest add button --yes --overwrite`
+                    : packageManager === "yarn"
+                      ? `yarn dlx ${packageName}@latest add button --yes --overwrite`
+                      : packageManager === "bun"
+                        ? `bunx --bun ${packageName}@latest add button --yes --overwrite`
+                        : `npx ${packageName}@latest add button --yes --overwrite`,
+                "",
+                "Now you can use the component in your project!",
+              ],
+            },
+          }
+        } else if (currentFramework === "react") {
+          guides = {
+            next: {
+              description: "Installation guide for Next.js project",
+              steps: [
+                "Create a Next.js project if you don't have one already:",
+                `${packageManager} create next-app my-app`,
+                "",
+                "Navigate to your project directory:",
+                "cd my-app",
+                "",
+                "Add shadcn/ui to your project:",
+                packageManager === "npm"
+                  ? `npx ${packageName}@latest init`
+                  : packageManager === "pnpm"
+                    ? `pnpm dlx ${packageName}@latest init`
+                    : packageManager === "yarn"
+                      ? `yarn dlx ${packageName}@latest init`
+                      : packageManager === "bun"
+                        ? `bunx --bun ${packageName}@latest init`
+                        : `npx ${packageName}@latest init`,
+                "",
+                "Follow the prompts to select your preferences",
+                "",
+                "Once initialized, you can add components:",
+                packageManager === "npm"
+                  ? `npx ${packageName}@latest add button`
+                  : packageManager === "pnpm"
+                    ? `pnpm dlx ${packageName}@latest add button`
+                    : packageManager === "yarn"
+                      ? `yarn dlx ${packageName}@latest add button`
+                      : packageManager === "bun"
+                        ? `bunx --bun ${packageName}@latest add button`
+                        : `npx ${packageName}@latest add button`,
+                "",
+                "Now you can use the component in your project!",
+              ],
+            },
+            vite: {
+              description: "Installation guide for Vite project",
+              steps: [
+                "Create a Vite project if you don't have one already:",
+                `${packageManager}${packageManager === "npm" ? " create" : ""} vite my-app -- --template react-ts`,
+                "",
+                "Navigate to your project directory:",
+                "cd my-app",
+                "",
+                "Install dependencies:",
+                `${packageManager} ${packageManager === "npm" ? "install" : "add"} -D tailwindcss postcss autoprefixer`,
+                "",
+                "Initialize Tailwind CSS:",
+                "npx tailwindcss init -p",
+                "",
+                "Add shadcn/ui to your project:",
+                packageManager === "npm"
+                  ? `npx ${packageName}@latest init`
+                  : packageManager === "pnpm"
+                    ? `pnpm dlx ${packageName}@latest init`
+                    : packageManager === "yarn"
+                      ? `yarn dlx ${packageName}@latest init`
+                      : packageManager === "bun"
+                        ? `bunx --bun ${packageName}@latest init`
+                        : `npx ${packageName}@latest init`,
+                "",
+                "Follow the prompts to select your preferences",
+                "",
+                "Once initialized, you can add components:",
+                packageManager === "npm"
+                  ? `npx ${packageName}@latest add button`
+                  : packageManager === "pnpm"
+                    ? `pnpm dlx ${packageName}@latest add button`
+                    : packageManager === "yarn"
+                      ? `yarn dlx ${packageName}@latest add button`
+                      : packageManager === "bun"
+                        ? `bunx --bun ${packageName}@latest add button`
+                        : `npx ${packageName}@latest add button`,
+                "",
+                "Now you can use the component in your project!",
+              ],
+            },
+            remix: {
+              description: "Installation guide for Remix project",
+              steps: [
+                "Create a Remix project if you don't have one already:",
+                `${packageManager === "npm" ? "npx" : packageManager === "pnpm" ? "pnpm dlx" : packageManager === "yarn" ? "yarn dlx" : "bunx"} create-remix my-app`,
+                "",
+                "Navigate to your project directory:",
+                "cd my-app",
+                "",
+                "Install dependencies:",
+                `${packageManager} ${packageManager === "npm" ? "install" : "add"} -D tailwindcss postcss autoprefixer`,
+                "",
+                "Initialize Tailwind CSS:",
+                "npx tailwindcss init -p",
+                "",
+                "Add shadcn/ui to your project:",
+                packageManager === "npm"
+                  ? `npx ${packageName}@latest init`
+                  : packageManager === "pnpm"
+                    ? `pnpm dlx ${packageName}@latest init`
+                    : packageManager === "yarn"
+                      ? `yarn dlx ${packageName}@latest init`
+                      : packageManager === "bun"
+                        ? `bunx --bun ${packageName}@latest init`
+                        : `npx ${packageName}@latest init`,
+                "",
+                "Follow the prompts to select your preferences",
+                "",
+                "Once initialized, you can add components:",
+                packageManager === "npm"
+                  ? `npx ${packageName}@latest add button`
+                  : packageManager === "pnpm"
+                    ? `pnpm dlx ${packageName}@latest add button`
+                    : packageManager === "yarn"
+                      ? `yarn dlx ${packageName}@latest add button`
+                      : packageManager === "bun"
+                        ? `bunx --bun ${packageName}@latest add button`
+                        : `npx ${packageName}@latest add button`,
+                "",
+                "Now you can use the component in your project!",
+              ],
+            },
+            default: {
+              description: "Generic installation guide for React",
+              steps: [
+                "Make sure you have a React project set up",
+                "",
+                "Add shadcn/ui to your project:",
+                packageManager === "npm"
+                  ? `npx ${packageName}@latest init`
+                  : packageManager === "pnpm"
+                    ? `pnpm dlx ${packageName}@latest init`
+                    : packageManager === "yarn"
+                      ? `yarn dlx ${packageName}@latest init`
+                      : packageManager === "bun"
+                        ? `bunx --bun ${packageName}@latest init`
+                        : `npx ${packageName}@latest init`,
+                "",
+                "Follow the prompts to select your preferences",
+                "",
+                "Once initialized, you can add components:",
+                packageManager === "npm"
+                  ? `npx ${packageName}@latest add button`
+                  : packageManager === "pnpm"
+                    ? `pnpm dlx ${packageName}@latest add button`
+                    : packageManager === "yarn"
+                      ? `yarn dlx ${packageName}@latest add button`
+                      : packageManager === "bun"
+                        ? `bunx --bun ${packageName}@latest add button`
+                        : `npx ${packageName}@latest add button`,
+                "",
+                "Now you can use the component in your project!",
+              ],
+            },
+          }
+        }
+
         // Select appropriate guide based on build tool
-        const guide = guides[buildTool.toLowerCase() as keyof typeof guides] || guides.default;
-        
+        const guide = guides[buildTool.toLowerCase() as keyof typeof guides] || guides.default
+
         return {
-          content: `# ${guide.description} with ${packageManager}\n\n${guide.steps.join('\n')}`,
-          contentType: 'text/plain',
-        };
+          content: `# ${guide.description} with ${packageManager}\n\n${guide.steps.join("\n")}`,
+          contentType: "text/plain",
+        }
       } catch (error) {
         return {
           content: `Error generating installation guide: ${error instanceof Error ? error.message : String(error)}`,
-          contentType: 'text/plain',
-        };
+          contentType: "text/plain",
+        }
       }
-    };
+    }
   }
-  
-  return undefined;
-};
+
+  return undefined
+}

@@ -1,140 +1,158 @@
 /**
  * Prompts implementation for the Model Context Protocol (MCP) server.
- * 
+ *
  * This file defines prompts that guide the AI model's responses.
  * Prompts help to direct the model on how to process user requests.
  */
 
-import { getFramework } from './utils/framework.js';
+import { getFramework } from "./utils/framework.js"
 
 /**
  * List of prompts metadata available in this MCP server
  * Each prompt must have a name, description, and arguments if parameters are needed
  */
 export const prompts = {
-    "build-shadcn-page": {
-      name: "build-shadcn-page",
-      description: "Generate a complete shadcn/ui page using v4 components and blocks",
-      arguments: [
-          { 
-              name: "pageType",
-              description: "Type of page to build (dashboard, login, calendar, sidebar, products, custom)",
-              required: true,
-          },
-          {
-              name: "features",
-              description: "Specific features or components needed (comma-separated)"
-          },
-          {
-              name: "layout",
-              description: "Layout preference (sidebar, header, full-width, centered)"
-          },
-          {
-              name: "style",
-              description: "Design style (minimal, modern, enterprise, creative)"
-          }
-      ],
-    },
-    "create-dashboard": {
-      name: "create-dashboard",
-      description: "Create a comprehensive dashboard using shadcn/ui v4 blocks and components",
-      arguments: [
-          {
-              name: "dashboardType",
-              description: "Type of dashboard (analytics, admin, user, project, sales)",
-              required: true,
-          },
-          {
-              name: "widgets",
-              description: "Dashboard widgets needed (charts, tables, cards, metrics)"
-          },
-          {
-              name: "navigation",
-              description: "Navigation style (sidebar, top-nav, breadcrumbs)"
-          }
-      ],
-    },
-    "create-auth-flow": {
-      name: "create-auth-flow",
-      description: "Generate authentication pages using shadcn/ui v4 login blocks",
-      arguments: [
-          {
-              name: "authType",
-              description: "Authentication type (login, register, forgot-password, two-factor)",
-              required: true,
-          },
-          {
-              name: "providers",
-              description: "Auth providers (email, google, github, apple)"
-          },
-          {
-              name: "features",
-              description: "Additional features (remember-me, social-login, validation)"
-          }
-      ],
-    },
-    "optimize-shadcn-component": {
-      name: "optimize-shadcn-component",
-      description: "Optimize or enhance existing shadcn/ui components with best practices",
-      arguments: [
-          {
-              name: "component",
-              description: "Component name to optimize",
-              required: true,
-          },
-          {
-              name: "optimization",
-              description: "Type of optimization (performance, accessibility, responsive, animations)"
-          },
-          {
-              name: "useCase",
-              description: "Specific use case or context for the component"
-          }
-      ],
-    },
-    "create-data-table": {
-      name: "create-data-table",
-      description: "Create advanced data tables with shadcn/ui components",
-      arguments: [
-          {
-              name: "dataType",
-              description: "Type of data to display (users, products, orders, analytics)",
-              required: true,
-          },
-          {
-              name: "features",
-              description: "Table features (sorting, filtering, pagination, search, selection)"
-          },
-          {
-              name: "actions",
-              description: "Row actions (edit, delete, view, custom)"
-          }
-      ],
-    },
-  };
-  
+  "build-shadcn-page": {
+    name: "build-shadcn-page",
+    description: "Generate a complete shadcn/ui page using v4 components and blocks",
+    arguments: [
+      {
+        name: "pageType",
+        description: "Type of page to build (dashboard, login, calendar, sidebar, products, custom)",
+        required: true,
+      },
+      {
+        name: "features",
+        description: "Specific features or components needed (comma-separated)",
+      },
+      {
+        name: "layout",
+        description: "Layout preference (sidebar, header, full-width, centered)",
+      },
+      {
+        name: "style",
+        description: "Design style (minimal, modern, enterprise, creative)",
+      },
+    ],
+  },
+  "create-dashboard": {
+    name: "create-dashboard",
+    description: "Create a comprehensive dashboard using shadcn/ui v4 blocks and components",
+    arguments: [
+      {
+        name: "dashboardType",
+        description: "Type of dashboard (analytics, admin, user, project, sales)",
+        required: true,
+      },
+      {
+        name: "widgets",
+        description: "Dashboard widgets needed (charts, tables, cards, metrics)",
+      },
+      {
+        name: "navigation",
+        description: "Navigation style (sidebar, top-nav, breadcrumbs)",
+      },
+    ],
+  },
+  "create-auth-flow": {
+    name: "create-auth-flow",
+    description: "Generate authentication pages using shadcn/ui v4 login blocks",
+    arguments: [
+      {
+        name: "authType",
+        description: "Authentication type (login, register, forgot-password, two-factor)",
+        required: true,
+      },
+      {
+        name: "providers",
+        description: "Auth providers (email, google, github, apple)",
+      },
+      {
+        name: "features",
+        description: "Additional features (remember-me, social-login, validation)",
+      },
+    ],
+  },
+  "optimize-shadcn-component": {
+    name: "optimize-shadcn-component",
+    description: "Optimize or enhance existing shadcn/ui components with best practices",
+    arguments: [
+      {
+        name: "component",
+        description: "Component name to optimize",
+        required: true,
+      },
+      {
+        name: "optimization",
+        description: "Type of optimization (performance, accessibility, responsive, animations)",
+      },
+      {
+        name: "useCase",
+        description: "Specific use case or context for the component",
+      },
+    ],
+  },
+  "create-data-table": {
+    name: "create-data-table",
+    description: "Create advanced data tables with shadcn/ui components",
+    arguments: [
+      {
+        name: "dataType",
+        description: "Type of data to display (users, products, orders, analytics)",
+        required: true,
+      },
+      {
+        name: "features",
+        description: "Table features (sorting, filtering, pagination, search, selection)",
+      },
+      {
+        name: "actions",
+        description: "Row actions (edit, delete, view, custom)",
+      },
+    ],
+  },
+}
+
 /**
  * Map of prompt names to their handler functions
  * Each handler generates the actual prompt content with the provided parameters
  */
 export const promptHandlers = {
-    "build-shadcn-page": ({ pageType, features = "", layout = "sidebar", style = "modern" }: { 
-      pageType: string, features?: string, layout?: string, style?: string 
-    }) => {
-      const framework = getFramework();
-      const isSvelte = framework === 'svelte';
-      
-      return {
-        messages: [
-          {
-            role: "user",
-            content: {
-              type: "text",
-              text: `Create a complete ${pageType} page using shadcn/ui v4 components and blocks. 
+  "build-shadcn-page": ({
+    pageType,
+    features = "",
+    layout = "sidebar",
+    style = "modern",
+  }: {
+    pageType: string
+    features?: string
+    layout?: string
+    style?: string
+  }) => {
+    const framework = getFramework()
+    const getPattern = () => {
+      if (framework === "vue") {
+        return { pattern: "composables and composition API", struct: "Vue composables" }
+      } else if (framework === "svelte") {
+        return { pattern: "runes", struct: "Svelte runes" }
+      } else if (framework === "react") {
+        return { pattern: "hooks", struct: "React hooks" }
+      } else {
+        return { pattern: "", struct: "" }
+      }
+    }
+
+    return {
+      messages: [
+        {
+          role: "user",
+          content: {
+            type: "text",
+            text: `Create a complete ${pageType} page using shadcn/ui v4 components and blocks. 
 
 REQUIREMENTS:
 - Page Type: ${pageType}
-- Features: ${features || 'Standard features for this page type'}
+- Features: ${features || "Standard features for this page type"}
 - Layout: ${layout}
 - Design Style: ${style}
 
@@ -147,7 +165,7 @@ INSTRUCTIONS:
    - Use shadcn/ui v4 components and blocks as building blocks
    - Ensure responsive design with Tailwind CSS classes
    - Implement proper TypeScript types
-   - Follow ${isSvelte ? 'Svelte' : 'React'} best practices and ${isSvelte ? 'runes' : 'hooks'} patterns
+   - Follow ${framework} best practices and ${getPattern().pattern} patterns
    - Include proper accessibility attributes
 
 3. For ${pageType} pages specifically:
@@ -157,7 +175,7 @@ INSTRUCTIONS:
    - Create a main page component
    - Use sub-components for complex sections
    - Include proper imports from shadcn/ui registry
-   - Add necessary state management with ${isSvelte ? 'Svelte runes' : 'React hooks'}
+   - Add necessary state management with ${getPattern().struct}
    - Include proper error handling
 
 5. Styling Guidelines:
@@ -167,25 +185,41 @@ INSTRUCTIONS:
    - Use shadcn/ui design tokens
 
 Please provide complete, production-ready code with proper imports and TypeScript types.`,
-            },
           },
-        ],
-      };
-    },
+        },
+      ],
+    }
+  },
 
-    "create-dashboard": ({ dashboardType, widgets = "charts,tables,cards", navigation = "sidebar" }: { 
-      dashboardType: string, widgets?: string, navigation?: string 
-    }) => {
-      const framework = getFramework();
-      const isSvelte = framework === 'svelte';
-      
-      return {
-        messages: [
-          {
-            role: "user",
-            content: {
-              type: "text",
-              text: `Create a comprehensive ${dashboardType} dashboard using shadcn/ui v4 blocks and components.
+  "create-dashboard": ({
+    dashboardType,
+    widgets = "charts,tables,cards",
+    navigation = "sidebar",
+  }: {
+    dashboardType: string
+    widgets?: string
+    navigation?: string
+  }) => {
+    const framework = getFramework()
+    const getPattern = () => {
+      if (framework === "vue") {
+        return { pattern: "composables and composition API", struct: "Vue composables" }
+      } else if (framework === "svelte") {
+        return { pattern: "runes", struct: "Svelte runes" }
+      } else if (framework === "react") {
+        return { pattern: "hooks", struct: "React hooks" }
+      } else {
+        return { pattern: "", struct: "" }
+      }
+    }
+
+    return {
+      messages: [
+        {
+          role: "user",
+          content: {
+            type: "text",
+            text: `Create a comprehensive ${dashboardType} dashboard using shadcn/ui v4 blocks and components.
 
 REQUIREMENTS:
 - Dashboard Type: ${dashboardType}
@@ -205,7 +239,10 @@ INSTRUCTIONS:
    - Add breadcrumb navigation
 
 3. Widgets to Include:
-   ${widgets.split(',').map(widget => `- ${widget.trim()} with real-time data simulation`).join('\n   ')}
+   ${widgets
+     .split(",")
+     .map(widget => `- ${widget.trim()} with real-time data simulation`)
+     .join("\n   ")}
 
 4. Key Features:
    - Responsive design that works on mobile, tablet, and desktop
@@ -216,7 +253,7 @@ INSTRUCTIONS:
 
 5. Data Management:
    - Create mock data structures for ${dashboardType}
-   - Implement state management with ${isSvelte ? 'Svelte runes' : 'React hooks'}
+   - Implement state management with ${getPattern().struct}
    - Add loading states and error handling
    - Include data refresh functionality
 
@@ -227,22 +264,28 @@ INSTRUCTIONS:
    - Color contrast compliance
 
 Provide complete code with all necessary imports, types, and implementations.`,
-            },
           },
-        ],
-      };
-    },
+        },
+      ],
+    }
+  },
 
-    "create-auth-flow": ({ authType, providers = "email", features = "validation" }: { 
-      authType: string, providers?: string, features?: string 
-    }) => {
-      return {
-        messages: [
-          {
-            role: "user",
-            content: {
-              type: "text",
-              text: `Create a complete ${authType} authentication flow using shadcn/ui v4 login blocks and components.
+  "create-auth-flow": ({
+    authType,
+    providers = "email",
+    features = "validation",
+  }: {
+    authType: string
+    providers?: string
+    features?: string
+  }) => {
+    return {
+      messages: [
+        {
+          role: "user",
+          content: {
+            type: "text",
+            text: `Create a complete ${authType} authentication flow using shadcn/ui v4 login blocks and components.
 
 REQUIREMENTS:
 - Auth Type: ${authType}
@@ -256,15 +299,16 @@ INSTRUCTIONS:
    - Study different authentication patterns and layouts
 
 2. Authentication Components:
-   - Form validation using react-hook-form or similar
+   - Form validation using react-hook-form, @tanstack/vue-form or similar
    - Input components with proper error states
    - Loading states during authentication
    - Success/error feedback with toast notifications
 
 3. Providers Implementation:
-   ${providers.split(',').map(provider => 
-     `- ${provider.trim()}: Implement ${provider.trim()} authentication UI`
-   ).join('\n   ')}
+   ${providers
+     .split(",")
+     .map(provider => `- ${provider.trim()}: Implement ${provider.trim()} authentication UI`)
+     .join("\n   ")}
 
 4. Security Features:
    - Form validation with proper error messages
@@ -280,9 +324,10 @@ INSTRUCTIONS:
    - Remember me functionality (if applicable)
 
 6. Form Features:
-   ${features.split(',').map(feature => 
-     `- ${feature.trim()}: Implement ${feature.trim()} functionality`
-   ).join('\n   ')}
+   ${features
+     .split(",")
+     .map(feature => `- ${feature.trim()}: Implement ${feature.trim()} functionality`)
+     .join("\n   ")}
 
 7. Layout Options:
    - Choose appropriate layout from available login blocks
@@ -291,25 +336,41 @@ INSTRUCTIONS:
    - Responsive design for all screen sizes
 
 Provide complete authentication flow code with proper TypeScript types, validation, and error handling.`,
-            },
           },
-        ],
-      };
-    },
+        },
+      ],
+    }
+  },
 
-    "optimize-shadcn-component": ({ component, optimization = "performance", useCase = "general" }: { 
-      component: string, optimization?: string, useCase?: string 
-    }) => {
-      const framework = getFramework();
-      const isSvelte = framework === 'svelte';
-      
-      return {
-        messages: [
-          {
-            role: "user",
-            content: {
-              type: "text",
-              text: `Optimize the ${component} shadcn/ui component for ${optimization} and ${useCase} use case.
+  "optimize-shadcn-component": ({
+    component,
+    optimization = "performance",
+    useCase = "general",
+  }: {
+    component: string
+    optimization?: string
+    useCase?: string
+  }) => {
+    const framework = getFramework()
+    const getPattern = () => {
+      if (framework === "vue") {
+        return { pattern: "composables and composition API", struct: "Vue composables" }
+      } else if (framework === "svelte") {
+        return { pattern: "runes", struct: "Svelte reactivity patterns" }
+      } else if (framework === "react") {
+        return { pattern: "hooks", struct: "proper memoization" }
+      } else {
+        return { pattern: "", struct: "" }
+      }
+    }
+
+    return {
+      messages: [
+        {
+          role: "user",
+          content: {
+            type: "text",
+            text: `Optimize the ${component} shadcn/ui component for ${optimization} and ${useCase} use case.
 
 REQUIREMENTS:
 - Component: ${component}
@@ -323,7 +384,7 @@ INSTRUCTIONS:
    - Use 'get_component_metadata' to understand dependencies
 
 2. Optimization Strategy for ${optimization}:
-   ${getOptimizationInstructions(optimization, isSvelte)}
+   ${getOptimizationInstructions(optimization)}
 
 3. Use Case Specific Enhancements for ${useCase}:
    - Analyze how ${component} is typically used in ${useCase} scenarios
@@ -337,8 +398,8 @@ INSTRUCTIONS:
    - Include usage examples demonstrating improvements
 
 5. Best Practices:
-   - Follow ${isSvelte ? 'Svelte' : 'React'} performance best practices
-   - Implement ${isSvelte ? 'Svelte reactivity patterns' : 'proper memoization'} where needed
+   - Follow ${framework} performance best practices
+   - Implement ${getPattern().struct} where needed
    - Ensure backward compatibility
    - Add comprehensive prop validation
 
@@ -348,22 +409,28 @@ INSTRUCTIONS:
    - Performance testing guidelines
 
 Provide the optimized component code with detailed explanations of improvements made.`,
-            },
           },
-        ],
-      };
-    },
+        },
+      ],
+    }
+  },
 
-    "create-data-table": ({ dataType, features = "sorting,filtering,pagination", actions = "edit,delete" }: { 
-      dataType: string, features?: string, actions?: string 
-    }) => {
-      return {
-        messages: [
-          {
-            role: "user",
-            content: {
-              type: "text",
-              text: `Create an advanced data table for ${dataType} using shadcn/ui v4 components.
+  "create-data-table": ({
+    dataType,
+    features = "sorting,filtering,pagination",
+    actions = "edit,delete",
+  }: {
+    dataType: string
+    features?: string
+    actions?: string
+  }) => {
+    return {
+      messages: [
+        {
+          role: "user",
+          content: {
+            type: "text",
+            text: `Create an advanced data table for ${dataType} using shadcn/ui v4 components.
 
 REQUIREMENTS:
 - Data Type: ${dataType}
@@ -383,21 +450,25 @@ INSTRUCTIONS:
    - Add responsive table design
 
 3. Features Implementation:
-   ${features.split(',').map(feature => {
-     const featureInstructions: Record<string, string> = {
-       'sorting': '- Column sorting (ascending/descending) with visual indicators',
-       'filtering': '- Global search and column-specific filters',
-       'pagination': '- Page-based navigation with configurable page sizes',
-       'search': '- Real-time search across all columns',
-       'selection': '- Row selection with bulk actions support'
-     };
-     return featureInstructions[feature.trim()] || `- ${feature.trim()}: Implement ${feature.trim()} functionality`;
-   }).join('\n   ')}
+   ${features
+     .split(",")
+     .map(feature => {
+       const featureInstructions: Record<string, string> = {
+         sorting: "- Column sorting (ascending/descending) with visual indicators",
+         filtering: "- Global search and column-specific filters",
+         pagination: "- Page-based navigation with configurable page sizes",
+         search: "- Real-time search across all columns",
+         selection: "- Row selection with bulk actions support",
+       }
+       return featureInstructions[feature.trim()] || `- ${feature.trim()}: Implement ${feature.trim()} functionality`
+     })
+     .join("\n   ")}
 
 4. Row Actions:
-   ${actions.split(',').map(action => 
-     `- ${action.trim()}: Implement ${action.trim()} action with proper confirmation dialogs`
-   ).join('\n   ')}
+   ${actions
+     .split(",")
+     .map(action => `- ${action.trim()}: Implement ${action.trim()} action with proper confirmation dialogs`)
+     .join("\n   ")}
 
 5. Data Management:
    - Create mock data for ${dataType}
@@ -419,12 +490,12 @@ INSTRUCTIONS:
    - Virtual scrolling for large datasets (if needed)
 
 Provide complete data table implementation with proper TypeScript types, mock data, and usage examples.`,
-            },
           },
-        ],
-      };
-    },
-};
+        },
+      ],
+    }
+  },
+}
 
 /**
  * Helper function to get page type specific instructions
@@ -437,65 +508,78 @@ function getPageTypeSpecificInstructions(pageType: string): string {
    - Implement sidebar navigation with proper menu structure
    - Add header with user profile and notifications
    - Create responsive grid layout for widgets`,
-    
+
     login: `
    - Use login blocks as reference (login-01 through login-05)
    - Implement form validation with clear error messages
    - Add social authentication options if specified
    - Include forgot password and sign-up links
    - Ensure mobile-responsive design`,
-    
+
     calendar: `
    - Use calendar blocks (calendar-01 through calendar-32)
    - Implement different calendar views (month, week, day)
    - Add event creation and management
    - Include date navigation and filtering
    - Support event categories and colors`,
-    
+
     sidebar: `
    - Use sidebar blocks as foundation (sidebar-01 through sidebar-16)
    - Implement collapsible navigation
    - Add proper menu hierarchy
    - Include search functionality
    - Support both light and dark themes`,
-    
+
     products: `
    - Use products blocks as reference (products-01)
    - Create product grid/list views
    - Implement filtering and sorting
    - Add product details modal or page
    - Include shopping cart functionality if needed`,
-    
+
     custom: `
    - Analyze requirements and choose appropriate blocks
    - Combine multiple block patterns as needed
    - Focus on component reusability
-   - Ensure consistent design patterns`
-  };
-  
-  return instructions[pageType as keyof typeof instructions] || instructions.custom;
+   - Ensure consistent design patterns`,
+  }
+
+  return instructions[pageType as keyof typeof instructions] || instructions.custom
 }
 
 /**
  * Helper function to get optimization specific instructions
  */
-function getOptimizationInstructions(optimization: string, isSvelte: boolean): string {
-  const instructions = {
-    performance: isSvelte ? `
+function getOptimizationInstructions(optimization: string): string {
+  const framework = getFramework()
+  let performance = ""
+  if (framework === "vue") {
+    performance = `
+   - Use Vue's built-in reactivity with composables for fine-grained updates
+   - Minimize the use of reactive statements that cause unnecessary updates
+   - Minimize DOM manipulations
+   - Implement virtual scrolling for large lists
+   - Implement lazy loading for heavy components`
+  } else if (framework === "svelte") {
+    return `
    - Use Svelte's built-in reactivity with runes for fine-grained updates
    - Minimize the use of reactive statements that cause unnecessary updates
    - Use derived state with $derived
    - Consider using $effect only when necessary
    - Implement lazy loading for heavy components
    - Use the $state.raw for non-reactive data to avoid unnecessary reactivity overhead`
-    : `
+  } else if (framework === "react") {
+    performance = `
    - Implement React.memo for preventing unnecessary re-renders
    - Use useMemo and useCallback hooks appropriately
    - Optimize bundle size by code splitting
    - Implement virtual scrolling for large lists
    - Minimize DOM manipulations
-   - Use lazy loading for heavy components`,
-   
+   - Use lazy loading for heavy components`
+  }
+  const instructions = {
+    performance: performance,
+
     accessibility: `
    - Add proper ARIA labels and roles
    - Ensure keyboard navigation support
@@ -503,7 +587,7 @@ function getOptimizationInstructions(optimization: string, isSvelte: boolean): s
    - Add screen reader compatibility
    - Ensure color contrast compliance
    - Support high contrast mode`,
-   
+
     responsive: `
    - Implement mobile-first design approach
    - Use CSS Grid and Flexbox effectively
@@ -511,16 +595,18 @@ function getOptimizationInstructions(optimization: string, isSvelte: boolean): s
    - Optimize touch interactions for mobile
    - Ensure readable text sizes on all devices
    - Implement responsive navigation patterns`,
-   
+
     animations: `
    - Add smooth transitions between states
    - Implement loading animations and skeletons
    - Use CSS transforms for better performance
    - Add hover and focus animations
    - Implement page transition animations
-   - Ensure animations respect reduced motion preferences`
-  };
-  
-   return instructions[optimization as keyof typeof instructions] || 
-         'Focus on general code quality improvements and best practices implementation.';
+   - Ensure animations respect reduced motion preferences`,
+  }
+
+  return (
+    instructions[optimization as keyof typeof instructions] ||
+    "Focus on general code quality improvements and best practices implementation."
+  )
 }

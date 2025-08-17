@@ -1,6 +1,6 @@
 {
   "name": "@jpisnice/shadcn-ui-mcp-server",
-  "version": "1.0.3",
+  "version": "1.5.0",
   "description": "A Model Context Protocol (MCP) server for shadcn/ui components, providing AI assistants with access to component source code, demos, blocks, and metadata.",
   "type": "module",
   "main": "./build/index.js",
@@ -15,10 +15,13 @@
   "scripts": {
     "build": "tsc",
     "clean": "rm -rf build",
-    "prepublishOnly": "npm run clean && npm run build && chmod +x build/index.js",
+    "prepublishOnly": "bun run clean && bun run build && chmod +x build/index.js",
     "start": "node build/index.js",
     "dev": "tsc && node build/index.js",
-    "test": "./test-package.sh",
+    "test": "vitest run",
+    "test:watch": "vitest watch",
+    "coverage": "vitest run --coverage",
+    "test:package": "./test-package.sh",
     "examples": "./examples.sh"
   },
   "keywords": [
@@ -27,36 +30,49 @@
     "shadcn",
     "shadcn-ui",
     "ui-components",
+    "vue",
+    "nuxt",
     "react",
     "typescript",
     "ai-tools",
     "claude",
+    "kiro",
+    "windsurf",
+    "cursor",
     "copilot"
   ],
-  "author": "Janardhan Pollle <www.janardhanpolle@gmail.com>",
+  "author": "Ano Rebel <hacker4rebel@gmail.com>",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Jpisnice/shadcn-ui-mcp-server.git"
+    "url": "git+https://github.com/AnoRebel/shadcn-ui-mcp-server.git"
   },
   "bugs": {
-    "url": "https://github.com/Jpisnice/shadcn-ui-mcp-server/issues"
+    "url": "https://github.com/AnoRebel/shadcn-ui-mcp-server/issues"
   },
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=20.0.0"
   },
   "dependencies": {
+    "@electric-sql/pglite": "^0.3.6",
     "@modelcontextprotocol/sdk": "^1.16.0",
     "axios": "^1.8.4",
+    "chalk": "^5.4.1",
     "cheerio": "^1.0.0",
-    "zod": "^3.24.2",
-    "winston": "^3.15.0",
+    "cli-table3": "^0.6.5",
+    "commander": "^14.0.0",
     "joi": "^17.13.3",
-    "uuid": "^10.0.0"
+    "ora": "^8.2.0",
+    "uuid": "^10.0.0",
+    "winston": "^3.15.0",
+    "zod": "^3.24.2"
   },
   "devDependencies": {
     "@types/node": "^22.10.5",
     "@types/uuid": "^10.0.0",
-    "typescript": "^5.7.2"
+    "@vitest/coverage-v8": "^3.2.4",
+    "typescript": "^5.7.2",
+    "vitest": "^3.2.4",
+    "vitest-mock-extended": "^3.1.0"
   }
 }
