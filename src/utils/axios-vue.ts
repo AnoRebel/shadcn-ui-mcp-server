@@ -1,14 +1,35 @@
 import { Axios } from "axios"
 import { logError, logWarning, logInfo } from "./logger.js"
 
-// Constants for the v4 repository structure
+// Constants for the Vue repository structure (v4)
 const REPO_OWNER = "unovue"
 const REPO_NAME = "shadcn-vue"
 const REPO_BRANCH = "dev"
-const V4_BASE_PATH = "apps/v4"
-const REGISTRY_PATH = `${V4_BASE_PATH}/registry`
-const NEW_YORK_V4_PATH = `${REGISTRY_PATH}/new-york-v4`
 
+// App paths
+const APPS_V4_PATH = `apps/v4`
+const REGISTRY_PATH = `${APPS_V4_PATH}/registry`
+const NEW_YORK_V4_PATH = `${REGISTRY_PATH}/new-york-v4`
+const UI_PATH = `${NEW_YORK_V4_PATH}/ui`
+const BLOCKS_PATH = `${NEW_YORK_V4_PATH}/blocks`
+const DEMOS_PATH = `${APPS_V4_PATH}/components`
+const formatComponentNameToCapital = (name: string) => {
+  return name
+    .split("-")
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join("")
+}
+const toKebabCase = (name: string) =>
+  name
+    // Convert PascalCase or camelCase to kebab-case
+    .replace(/([a-z0-9])([A-Z])/g, "$1-$2")
+    .replace(/\s+/g, "-")
+    .toLowerCase()
+// Normalize block names like "login01", "Login01", or "login-01" -> "Login01"
+const normalizeBlockName = (name: string) => {
+  const parts = (name || "").match(/[a-zA-Z]+|\d+/g) || []
+  return parts.map(p => (/[0-9]/.test(p) ? p : p.charAt(0).toUpperCase() + p.slice(1).toLowerCase())).join("")
+}
 // GitHub API for accessing repository structure and metadata
 const githubApi = new Axios({
   baseURL: "https://api.github.com",
@@ -43,56 +64,89 @@ const githubRaw = new Axios({
 })
 
 /**
- * Fetch component source code from the v4 registry
+ * Fetch component source code from the Vue registry
  * @param componentName Name of the component
+ * @param style Optional style variant ('new-york' or 'default')
  * @returns Promise with component source code
  */
-async function getComponentSource(componentName: string): Promise<string> {
-  const componentPath = `${NEW_YORK_V4_PATH}/ui/${componentName.toLowerCase()}/${componentName.toLowerCase().charAt(0).toUpperCase() + componentName.toLowerCase().slice(1)}.vue`
+async function getComponentSource(componentName: string, style: string = "new-york-v4"): Promise<string> {
+  const formattedComponentName = formatComponentNameToCapital(componentName)
+  const componentFolder = componentName.toLowerCase()
+  const basePath = UI_PATH // Only new-york-v4 is supported for v4
+  const componentPath = `${basePath}/${componentFolder}/${formattedComponentName}.vue`
 
   try {
     const response = await githubRaw.get(`/${componentPath}`)
     return response.data
   } catch (error) {
-    throw new Error(`Component "${componentName}" not found in v4 registry`)
+    // Try alternative paths if the primary fails
+    const altPaths = [
+      `${basePath}/${componentFolder}/${formattedComponentName}.vue`,
+      `${basePath}/${componentFolder}/index.ts`,
+      `${basePath}/${formattedComponentName}.vue`,
+    ]
+
+    for (const altPath of altPaths) {
+      try {
+        const response = await githubRaw.get(`/${altPath}`)
+        return response.data
+      } catch {
+        continue
+      }
+    }
+
+    throw new Error(`Component "${formattedComponentName}" not found in Vue registry (v4)`)
   }
 }
 
 /**
- * Fetch component demo/example from the v4 registry
+ * Fetch component demo/example from the Vue registry
  * @param componentName Name of the component
+ * @param style Optional style variant ('new-york' or 'default')
  * @returns Promise with component demo code
  */
-async function getComponentDemo(componentName: string): Promise<string> {
-  const demoPath = `${V4_BASE_PATH}/components/${componentName.toLowerCase().charAt(0).toUpperCase() + componentName.toLowerCase().slice(1)}Demo.vue`
+async function getComponentDemo(componentName: string, style: string = "new-york-v4"): Promise<string> {
+  const formattedComponentName = formatComponentNameToCapital(componentName)
+  const demoPaths = [`${DEMOS_PATH}/${formattedComponentName}Demo.vue`, `${DEMOS_PATH}/${formattedComponentName}.vue`]
 
-  try {
-    const response = await githubRaw.get(`/${demoPath}`)
-    return response.data
-  } catch (error) {
-    throw new Error(`Demo for component "${componentName}" not found in v4 registry`)
+  for (const demoPath of demoPaths) {
+    try {
+      const response = await githubRaw.get(`/${demoPath}`)
+      return response.data
+    } catch (error) {
+      continue
+    }
   }
+
+  throw new Error(`Demo for component "${formattedComponentName}" not found in Vue registry (v4)`)
 }
 
 /**
- * Fetch all available components from the registry
+ * Fetch all available components from the Vue registry
+ * @param style Optional style variant ('new-york' or 'default')
  * @returns Promise with list of component names
  */
-async function getAvailableComponents(): Promise<string[]> {
+async function getAvailableComponents(style: string = "new-york-v4"): Promise<string[]> {
   try {
-    // First try the GitHub API
-    const response = await githubApi.get(`/repos/${REPO_OWNER}/${REPO_NAME}/contents/${NEW_YORK_V4_PATH}/ui`)
+    // v4 components live under UI_PATH as directories
+    const response = await githubApi.get(`/repos/${REPO_OWNER}/${REPO_NAME}/contents/${UI_PATH}`)
 
     if (!response.data || !Array.isArray(response.data)) {
       throw new Error("Invalid response from GitHub API")
     }
 
     const components = response.data
-      .filter((item: any) => item.type === "file" && item.name.endsWith(".vue"))
-      .map((item: any) => item.name.replace(".vue", ""))
+      .filter((item: any) => item.type === "dir" || (item.type === "file" && item.name.endsWith(".vue")))
+      .map((item: any) => {
+        if (item.type === "dir") {
+          return item.name
+        } else {
+          return item.name.replace(".vue", "")
+        }
+      })
 
     if (components.length === 0) {
-      throw new Error("No components found in the registry")
+      throw new Error("No components found in the Vue registry (v4)")
     }
 
     return components
@@ -109,9 +163,7 @@ async function getAvailableComponents(): Promise<string[]> {
           `GitHub API rate limit exceeded. Please set GITHUB_PERSONAL_ACCESS_TOKEN environment variable for higher limits. Error: ${message}`
         )
       } else if (status === 404) {
-        throw new Error(
-          `Components directory not found. The path ${NEW_YORK_V4_PATH}/ui may not exist in the repository.`
-        )
+        throw new Error(`Components directory not found. The path ${UI_PATH} may not exist in the repository.`)
       } else if (status === 401) {
         throw new Error(`Authentication failed. Please check your GITHUB_PERSONAL_ACCESS_TOKEN if provided.`)
       } else {
@@ -124,14 +176,14 @@ async function getAvailableComponents(): Promise<string[]> {
       throw new Error(`Network error: ${error.message}. Please check your internet connection.`)
     }
 
-    // If all else fails, provide a fallback list of known components
+    // If all else fails, provide a fallback list of known Vue components
     logWarning("Using fallback component list due to API issues")
     return getFallbackComponents()
   }
 }
 
 /**
- * Fallback list of known shadcn/ui v4 components
+ * Fallback list of known shadcn-vue components
  * This is used when the GitHub API is unavailable
  */
 function getFallbackComponents(): string[] {
@@ -153,6 +205,7 @@ function getFallbackComponents(): string[] {
     "command",
     "context-menu",
     "data-table",
+    "date-picker",
     "dialog",
     "drawer",
     "dropdown-menu",
@@ -163,7 +216,9 @@ function getFallbackComponents(): string[] {
     "label",
     "menubar",
     "navigation-menu",
+    "number-field",
     "pagination",
+    "pin-input",
     "popover",
     "progress",
     "radio-group",
@@ -181,6 +236,7 @@ function getFallbackComponents(): string[] {
     "table",
     "tabs",
     "textarea",
+    "toast",
     "toggle",
     "toggle-group",
     "tooltip",
@@ -188,43 +244,50 @@ function getFallbackComponents(): string[] {
 }
 
 /**
- * Fetch component metadata from the registry
+ * Fetch component metadata from the Vue registry
  * @param componentName Name of the component
  * @returns Promise with component metadata
  */
 async function getComponentMetadata(componentName: string): Promise<any> {
   try {
-    const response = await githubRaw.get(`/${V4_BASE_PATH}/index.ts`)
-    const registryContent = response.data
+    const response = await githubRaw.get(`/${APPS_V4_PATH}/__registry__/index.ts`)
+    const content: string = response.data as string
 
-    // Parse component metadata using a more robust approach
-    const componentRegex = new RegExp(
-      `"${componentName}"\\s*:\\s*{[^}]*?name:\\s*["']${componentName}["'][\\s\\S]*?}`,
-      "g"
-    )
-    const match = registryContent.match(componentRegex)
-
-    if (!match) {
-      return null
+    // Find the block for the component key
+    const entryRegex = new RegExp(`"${componentName}"\s*:\\s*\{([\\s\\S]*?)\n\}`, "s")
+    const entryMatch = content.match(entryRegex)
+    if (!entryMatch) {
+      throw new Error(`Registry entry for ${componentName} not found`)
     }
 
-    const componentData = match[0]
+    const entry = entryMatch[1]
 
-    // Extract metadata
-    const nameMatch = componentData.match(/name:\s*["']([^"']+)["']/)
-    const typeMatch = componentData.match(/type:\s*["']([^"']+)["']/)
-    const dependenciesMatch = componentData.match(/dependencies:\s*\[([^\]]*)\]/s)
-    const registryDepsMatch = componentData.match(/registryDependencies:\s*\[([^\]]*)\]/s)
+    // Extract simple fields
+    const typeMatch = entry.match(/type:\s*"([^"]+)"/)
+    const depsMatch = entry.match(/registryDependencies:\s*\[([^\]]*)\]/s)
+    const filesMatch = entry.match(/files:\s*\[([\s\S]*?)\]/)
+    const registryDependencies = depsMatch
+      ? depsMatch[1]
+          .split(",")
+          .map(d => d.replace(/["'\s]/g, "").trim())
+          .filter(Boolean)
+      : []
+
+    // Parse file paths (best-effort)
+    const filePathRegex = /path:\s*"([^"]+)"/g
+    const files: string[] = []
+    if (filesMatch) {
+      let m: RegExpExecArray | null
+      while ((m = filePathRegex.exec(filesMatch[1])) !== null) {
+        files.push(m[1])
+      }
+    }
 
     return {
-      name: nameMatch?.[1] || componentName,
+      name: componentName,
       type: typeMatch?.[1] || "registry:ui",
-      dependencies: dependenciesMatch?.[1]
-        ? dependenciesMatch[1].split(",").map((dep: string) => dep.trim().replace(/["']/g, ""))
-        : [],
-      registryDependencies: registryDepsMatch?.[1]
-        ? registryDepsMatch[1].split(",").map((dep: string) => dep.trim().replace(/["']/g, ""))
-        : [],
+      registryDependencies,
+      files,
     }
   } catch (error) {
     logError(`Error getting metadata for ${componentName}`, error)
@@ -233,7 +296,7 @@ async function getComponentMetadata(componentName: string): Promise<any> {
 }
 
 /**
- * Recursively builds a directory tree structure from a GitHub repository
+ * Recursively builds a directory tree structure from the Vue repository
  * @param owner Repository owner
  * @param repo Repository name
  * @param path Path within the repository to start building the tree from
@@ -360,153 +423,143 @@ async function buildDirectoryTree(
 }
 
 /**
- * Provides a basic directory structure for v4 registry without API calls
+ * Provides a basic directory structure for Vue registry without API calls
  * This is used as a fallback when API rate limits are hit
  */
-function getBasicV4Structure(): any {
+function getBasicVueStructure(): any {
   return {
     path: NEW_YORK_V4_PATH,
     type: "directory",
     note: "Basic structure provided due to API limitations",
     children: {
       ui: {
-        path: `${NEW_YORK_V4_PATH}/ui`,
+        path: `${UI_PATH}`,
         type: "directory",
-        description: "Contains all v4 UI components",
-        note: "Component files (.vue) are located here",
+        description: "Contains all Vue UI components (v4)",
+        note: "Component files (.vue) are located in subfolders",
       },
-      examples: {
-        path: `${V4_BASE_PATH}/components`,
+      blocks: {
+        path: `${BLOCKS_PATH}`,
         type: "directory",
-        description: "Contains component demo examples",
-        note: "Demo files showing component usage",
-      },
-      lib: {
-        path: `${V4_BASE_PATH}/lib`,
-        type: "directory",
-        description: "Contains utility libraries and functions",
+        description: "Contains Vue blocks for v4",
       },
     },
   }
 }
 
 /**
- * Extract description from block code comments
+ * Extract description from Vue component comments
  * @param code The source code to analyze
  * @returns Extracted description or null
  */
-function extractBlockDescription(code: string): string | null {
-  // Look for JSDoc comments or description comments
-  const descriptionRegex = /\/\*\*[\s\S]*?\*\/|\/\/\s*(.+)/
+function extractComponentDescription(code: string): string | null {
+  // Look for Vue component description in template comments or script comments
+  const descriptionRegex = /<!--[\s\S]*?-->|\/\*\*[\s\S]*?\*\/|\/\/\s*(.+)/
   const match = code.match(descriptionRegex)
   if (match) {
     // Clean up the comment
     const description = match[0]
-      .replace(/\/\*\*|\*\/|\*|\/\//g, "")
+      .replace(/<!--|}-->|\/\*\*|\*\/|\*|\/\//g, "")
       .trim()
       .split("\n")[0]
       .trim()
     return description.length > 0 ? description : null
   }
 
-  // Look for component name as fallback
-  const componentRegex = /export\s+(?:default\s+)?function\s+(\w+)/
-  const componentMatch = code.match(componentRegex)
-  if (componentMatch) {
-    return `${componentMatch[1]} - A reusable UI component`
+  // Look for component name in script setup
+  const componentRegex = /<script.*setup.*>[\s\S]*?<\/script>/
+  const scriptMatch = code.match(componentRegex)
+  if (scriptMatch) {
+    const nameMatch = scriptMatch[0].match(/defineComponent\(\s*{[\s\S]*?name:\s*['"]([^'"]+)['"]/)
+    if (nameMatch) {
+      return `${nameMatch[1]} - A reusable Vue UI component`
+    }
   }
 
   return null
 }
 
 /**
- * Extract dependencies from import statements
+ * Extract dependencies from Vue component imports
  * @param code The source code to analyze
  * @returns Array of dependency names
  */
-function extractDependencies(code: string): string[] {
+function extractVueDependencies(code: string): string[] {
   const dependencies: string[] = []
 
-  // Match import statements
-  const importRegex = /import\s+.*?\s+from\s+['"]([@\w\/\-\.]+)['"]/g
-  let match: RegExpExecArray | null
+  // Match import statements in script blocks
+  const scriptRegex = /<script.*?>([\s\S]*?)<\/script>/g
+  let scriptMatch: RegExpExecArray | null
 
-  match = importRegex.exec(code)
-  while (match !== null) {
-    const dep: string = match[1]
-    if (!dep.startsWith("./") && !dep.startsWith("../") && !dep.startsWith("@/")) {
-      dependencies.push(dep)
+  while ((scriptMatch = scriptRegex.exec(code)) !== null) {
+    const scriptContent = scriptMatch[1]
+    const importRegex = /import\s+.*?\s+from\s+['"]([@\w\/\-\.]+)['"]/g
+    let importMatch: RegExpExecArray | null
+
+    while ((importMatch = importRegex.exec(scriptContent)) !== null) {
+      const dep: string = importMatch[1]
+      if (!dep.startsWith("./") && !dep.startsWith("../") && !dep.startsWith("@/")) {
+        dependencies.push(dep)
+      }
     }
-    match = importRegex.exec(code)
+    // match = importRegex.exec(code)
   }
 
   return [...new Set(dependencies)] // Remove duplicates
 }
 
 /**
- * Extract component usage from code
+ * Extract component usage from Vue template
  * @param code The source code to analyze
  * @returns Array of component names used
  */
-function extractComponentUsage(code: string): string[] {
+function extractVueComponentUsage(code: string): string[] {
   const components: string[] = []
 
-  // Extract from imports of components (assuming they start with capital letters)
-  const importRegex = /import\s+\{([^}]+)\}\s+from/g
-  let match: RegExpExecArray | null
+  // Extract from template
+  const templateRegex = /<template.*?>([\s\S]*?)<\/template>/
+  const templateMatch = code.match(templateRegex)
 
-  match = importRegex.exec(code)
-  while (match !== null) {
-    const imports = match[1].split(",").map(imp => imp.trim())
-    imports.forEach(imp => {
-      if (imp[0] && imp[0] === imp[0].toUpperCase()) {
-        components.push(imp)
-      }
-    })
-    match = importRegex.exec(code)
+  if (templateMatch) {
+    const templateContent = templateMatch[1]
+    // Look for custom components (PascalCase or kebab-case)
+    const componentRegex = /<([A-Z]\w+|[a-z]+-[a-z-]+)/g
+    let match: RegExpExecArray | null
+
+    while ((match = componentRegex.exec(templateContent)) !== null) {
+      components.push(match[1])
+    }
   }
 
-  // Also look for JSX components in the code
-  const jsxRegex = /<([A-Z]\w+)/g
-  match = jsxRegex.exec(code)
-  while (match !== null) {
-    components.push(match[1])
-    match = jsxRegex.exec(code)
+  // Also extract from script imports
+  const scriptRegex = /<script.*?>([\s\S]*?)<\/script>/
+  const scriptMatch = code.match(scriptRegex)
+
+  if (scriptMatch) {
+    const scriptContent = scriptMatch[1]
+    const importRegex = /import\s+\{([^}]+)\}\s+from/g
+    let match: RegExpExecArray | null
+
+    while ((match = importRegex.exec(scriptContent)) !== null) {
+      const imports = match[1].split(",").map(imp => imp.trim())
+      imports.forEach(imp => {
+        if (imp[0] && imp[0] === imp[0].toUpperCase()) {
+          components.push(imp)
+        }
+      })
+    }
   }
+
+  // if (hasComponents) {
+  //   usage += `\n2. Copy the components to your components directory\n`
+  //   usage += `3. Update import paths as needed\n`
+  //   usage += `4. Ensure all dependencies are installed\n`
+  // } else {
+  //   usage += `\n2. Update import paths as needed\n`
+  //   usage += `3. Ensure all dependencies are installed\n`
+  // }
 
   return [...new Set(components)] // Remove duplicates
-}
-
-/**
- * Generate usage instructions for complex blocks
- * @param blockName Name of the block
- * @param structure Structure information
- * @returns Usage instructions string
- */
-function generateComplexBlockUsage(blockName: string, structure: any[]): string {
-  const hasComponents = structure.some(item => item.name === "components")
-
-  let usage = `To use the ${blockName} block:\n\n`
-  usage += `1. Copy the main files to your project:\n`
-
-  structure.forEach(item => {
-    if (item.type === "file") {
-      usage += `   - ${item.name}\n`
-    } else if (item.type === "directory" && item.name === "components") {
-      usage += `   - components/ directory (${item.count} files)\n`
-    }
-  })
-
-  if (hasComponents) {
-    usage += `\n2. Copy the components to your components directory\n`
-    usage += `3. Update import paths as needed\n`
-    usage += `4. Ensure all dependencies are installed\n`
-  } else {
-    usage += `\n2. Update import paths as needed\n`
-    usage += `3. Ensure all dependencies are installed\n`
-  }
-
-  return usage
 }
 
 /**
@@ -521,10 +574,10 @@ async function buildDirectoryTreeWithFallback(
   try {
     return await buildDirectoryTree(owner, repo, path, branch)
   } catch (error: any) {
-    // If it's a rate limit error and we're asking for the default v4 path, provide fallback
+    // If it's a rate limit error and we're asking for the default path, provide fallback
     if (error.message && error.message.includes("rate limit") && path === NEW_YORK_V4_PATH) {
       logWarning("Using fallback directory structure due to rate limit")
-      return getBasicV4Structure()
+      return getBasicVueStructure()
     }
     // Re-throw other errors
     throw error
@@ -532,139 +585,110 @@ async function buildDirectoryTreeWithFallback(
 }
 
 /**
- * Fetch block code from the v4 blocks directory
- * @param blockName Name of the block (e.g., "calendar-01", "dashboard-01")
+ * Fetch block code from the Vue blocks directory
+ * @param blockName Name of the block
  * @param includeComponents Whether to include component files for complex blocks
  * @returns Promise with block code and structure
  */
 async function getBlockCode(blockName: string, includeComponents: boolean = true): Promise<any> {
-  const blocksPath = `${NEW_YORK_V4_PATH}/blocks`
+  // Prefer v4 registry blocks (directories with page.vue)
+  const blocksPath = BLOCKS_PATH
+  const normalized = normalizeBlockName(blockName)
 
-  try {
-    // First, check if it's a simple block file (.vue)
-    try {
-      const simpleBlockResponse = await githubRaw.get(`/${blocksPath}/${blockName}.vue`)
-      if (simpleBlockResponse.status === 200) {
-        const code = simpleBlockResponse.data
+  // Check for complex block directory
+  const directoryResponse = await githubApi.get(
+    `/repos/${REPO_OWNER}/${REPO_NAME}/contents/${blocksPath}/${normalized}?ref=${REPO_BRANCH}`
+  )
 
-        // Extract useful information from the code
-        const description = extractBlockDescription(code)
-        const dependencies = extractDependencies(code)
-        const components = extractComponentUsage(code)
+  if (!directoryResponse.data) {
+    throw new Error(`Block "${blockName}" not found`)
+  }
 
-        return {
-          name: blockName,
-          type: "simple",
-          description: description || `Simple block: ${blockName}`,
-          code: code,
+  const blockStructure: any = {
+    name: normalized,
+    type: "complex",
+    description: `Complex block: ${normalized}`,
+    files: {},
+    structure: [],
+    totalFiles: 0,
+    dependencies: new Set(),
+    componentsUsed: new Set(),
+    code: undefined as unknown as string,
+  }
+
+  if (Array.isArray(directoryResponse.data)) {
+    blockStructure.totalFiles = directoryResponse.data.length
+
+    for (const item of directoryResponse.data) {
+      if (item.type === "file") {
+        const fileResponse = await githubRaw.get(`/${item.path}`)
+        const content = fileResponse.data
+
+        const description = extractComponentDescription(content)
+        const dependencies = extractVueDependencies(content)
+        const components = extractVueComponentUsage(content)
+
+        blockStructure.files[item.name] = {
+          path: item.name,
+          content: content,
+          size: content.length,
+          lines: content.split("\n").length,
+          description: description,
           dependencies: dependencies,
           componentsUsed: components,
-          size: code.length,
-          lines: code.split("\n").length,
-          usage: `Import and use directly in your application:\n\nimport { ${blockName.charAt(0).toUpperCase() + blockName.slice(1).replace(/-/g, "")} } from './blocks/${blockName}'`,
         }
-      }
-    } catch (error) {
-      // Continue to check for complex block directory
-    }
 
-    // Check if it's a complex block directory
-    const directoryResponse = await githubApi.get(
-      `/repos/${REPO_OWNER}/${REPO_NAME}/contents/${blocksPath}/${blockName}?ref=${REPO_BRANCH}`
-    )
+        dependencies.forEach((dep: string) => blockStructure.dependencies.add(dep))
+        components.forEach((comp: string) => blockStructure.componentsUsed.add(comp))
 
-    if (!directoryResponse.data) {
-      throw new Error(`Block "${blockName}" not found`)
-    }
+        blockStructure.structure.push({
+          name: item.name,
+          type: "file",
+          size: content.length,
+          description: description || `${item.name} - Main block file`,
+        })
 
-    const blockStructure: any = {
-      name: blockName,
-      type: "complex",
-      description: `Complex block: ${blockName}`,
-      files: {},
-      structure: [],
-      totalFiles: 0,
-      dependencies: new Set(),
-      componentsUsed: new Set(),
-    }
-
-    // Process the directory contents
-    if (Array.isArray(directoryResponse.data)) {
-      blockStructure.totalFiles = directoryResponse.data.length
-
-      for (const item of directoryResponse.data) {
-        if (item.type === "file") {
-          // Get the main page file
-          const fileResponse = await githubRaw.get(`/${item.path}`)
-          const content = fileResponse.data
-
-          // Extract information from the file
-          const description = extractBlockDescription(content)
-          const dependencies = extractDependencies(content)
-          const components = extractComponentUsage(content)
-
-          blockStructure.files[item.name] = {
-            path: item.name,
-            content: content,
-            size: content.length,
-            lines: content.split("\n").length,
-            description: description,
-            dependencies: dependencies,
-            componentsUsed: components,
-          }
-
-          // Add to overall dependencies and components
-          dependencies.forEach((dep: string) => blockStructure.dependencies.add(dep))
-          components.forEach((comp: string) => blockStructure.componentsUsed.add(comp))
-
-          blockStructure.structure.push({
-            name: item.name,
-            type: "file",
-            size: content.length,
-            description: description || `${item.name} - Main block file`,
-          })
-
-          // Use the first file's description as the block description if available
-          if (description && blockStructure.description === `Complex block: ${blockName}`) {
+        // If this is the main page file, set it as the primary code
+        if (item.name.toLowerCase() === "page.vue") {
+          blockStructure.code = content
+          if (description && blockStructure.description === `Complex block: ${normalized}`) {
             blockStructure.description = description
           }
-        } else if (item.type === "dir" && item.name === "components" && includeComponents) {
-          // Get component files
-          const componentsResponse = await githubApi.get(
-            `/repos/${REPO_OWNER}/${REPO_NAME}/contents/${item.path}?ref=${REPO_BRANCH}`
-          )
+        }
+      } else if (item.type === "dir" && item.name === "components" && includeComponents) {
+        const componentsResponse = await githubApi.get(
+          `/repos/${REPO_OWNER}/${REPO_NAME}/contents/${item.path}?ref=${REPO_BRANCH}`
+        )
 
-          if (Array.isArray(componentsResponse.data)) {
-            blockStructure.files.components = {}
-            const componentStructure: any[] = []
+        if (Array.isArray(componentsResponse.data)) {
+          blockStructure.files.components = {}
+          const componentStructure: any[] = []
 
-            for (const componentItem of componentsResponse.data) {
-              if (componentItem.type === "file") {
-                const componentResponse = await githubRaw.get(`/${componentItem.path}`)
-                const content = componentResponse.data
+          for (const componentItem of componentsResponse.data) {
+            if (componentItem.type === "file") {
+              const componentResponse = await githubRaw.get(`/${componentItem.path}`)
+              const content = componentResponse.data
 
-                const dependencies = extractDependencies(content)
-                const components = extractComponentUsage(content)
+              const dependencies = extractVueDependencies(content)
+              const components = extractVueComponentUsage(content)
 
-                blockStructure.files.components[componentItem.name] = {
-                  path: `components/${componentItem.name}`,
-                  content: content,
-                  size: content.length,
-                  lines: content.split("\n").length,
-                  dependencies: dependencies,
-                  componentsUsed: components,
-                }
-
-                // Add to overall dependencies and components
-                dependencies.forEach((dep: string) => blockStructure.dependencies.add(dep))
-                components.forEach((comp: string) => blockStructure.componentsUsed.add(comp))
-
-                componentStructure.push({
-                  name: componentItem.name,
-                  type: "component",
-                  size: content.length,
-                })
+              blockStructure.files.components[componentItem.name] = {
+                path: `components/${componentItem.name}`,
+                content: content,
+                size: content.length,
+                lines: content.split("\n").length,
+                dependencies: dependencies,
+                componentsUsed: components,
               }
+
+              dependencies.forEach((dep: string) => blockStructure.dependencies.add(dep))
+              components.forEach((comp: string) => blockStructure.componentsUsed.add(comp))
+
+              componentStructure.push({
+                name: componentItem.name,
+                type: "component",
+                size: content.length,
+              })
             }
 
             blockStructure.structure.push({
@@ -677,21 +701,26 @@ async function getBlockCode(blockName: string, includeComponents: boolean = true
         }
       }
     }
-
-    // Convert Sets to Arrays for JSON serialization
-    blockStructure.dependencies = Array.from(blockStructure.dependencies)
-    blockStructure.componentsUsed = Array.from(blockStructure.componentsUsed)
-
-    // Add usage instructions
-    blockStructure.usage = generateComplexBlockUsage(blockName, blockStructure.structure)
-
-    return blockStructure
-  } catch (error: any) {
-    if (error.response?.status === 404) {
-      throw new Error(`Block "${blockName}" not found. Available blocks can be found in the v4 blocks directory.`)
-    }
-    throw error
   }
+
+  // Convert Sets to Arrays for JSON serialization
+  blockStructure.dependencies = Array.from(blockStructure.dependencies)
+  blockStructure.componentsUsed = Array.from(blockStructure.componentsUsed)
+
+  // Ensure we return page.vue as main code. If not loaded above, fetch explicitly
+  if (!blockStructure.code) {
+    try {
+      const pageResponse = await githubRaw.get(`/${blocksPath}/${normalized}/page.vue`)
+      blockStructure.code = pageResponse.data
+    } catch (e) {
+      blockStructure.code = ""
+    }
+    // throw error
+  }
+
+  blockStructure.usage = `To use the ${normalized} block, copy \`page.vue\` and any \`components\` into your project and update imports as needed.`
+
+  return blockStructure
 }
 
 /**
@@ -700,126 +729,140 @@ async function getBlockCode(blockName: string, includeComponents: boolean = true
  * @returns Promise with categorized block list
  */
 async function getAvailableBlocks(category?: string): Promise<any> {
-  const blocksPath = `${NEW_YORK_V4_PATH}/blocks`
+  const blocksPath = BLOCKS_PATH
+
+  const allBlocks: any[] = []
 
   try {
     const response = await githubApi.get(`/repos/${REPO_OWNER}/${REPO_NAME}/contents/${blocksPath}?ref=${REPO_BRANCH}`)
 
-    if (!Array.isArray(response.data)) {
-      throw new Error("Unexpected response from GitHub API")
-    }
-
-    const blocks: any = {
-      calendar: [],
-      dashboard: [],
-      login: [],
-      sidebar: [],
-      products: [],
-      authentication: [],
-      charts: [],
-      mail: [],
-      music: [],
-      other: [],
-    }
-
-    for (const item of response.data) {
-      const blockInfo: any = {
-        name: item.name.replace(".vue", ""),
-        type: item.type === "file" ? "simple" : "complex",
-        path: item.path,
-        size: item.size || 0,
-        lastModified: item.download_url ? "Available" : "Directory",
-      }
-
-      // Add description based on name patterns
-      if (item.name.includes("calendar")) {
-        blockInfo.description = "Calendar component for date selection and scheduling"
-        blocks.calendar.push(blockInfo)
-      } else if (item.name.includes("dashboard")) {
-        blockInfo.description = "Dashboard layout with charts, metrics, and data display"
-        blocks.dashboard.push(blockInfo)
-      } else if (item.name.includes("login") || item.name.includes("signin")) {
-        blockInfo.description = "Authentication and login interface"
-        blocks.login.push(blockInfo)
-      } else if (item.name.includes("sidebar")) {
-        blockInfo.description = "Navigation sidebar component"
-        blocks.sidebar.push(blockInfo)
-      } else if (item.name.includes("products") || item.name.includes("ecommerce")) {
-        blockInfo.description = "Product listing and e-commerce components"
-        blocks.products.push(blockInfo)
-      } else if (item.name.includes("auth")) {
-        blockInfo.description = "Authentication related components"
-        blocks.authentication.push(blockInfo)
-      } else if (item.name.includes("chart") || item.name.includes("graph")) {
-        blockInfo.description = "Data visualization and chart components"
-        blocks.charts.push(blockInfo)
-      } else if (item.name.includes("mail") || item.name.includes("email")) {
-        blockInfo.description = "Email and mail interface components"
-        blocks.mail.push(blockInfo)
-      } else if (item.name.includes("music") || item.name.includes("player")) {
-        blockInfo.description = "Music player and media components"
-        blocks.music.push(blockInfo)
-      } else {
-        blockInfo.description = `${item.name} - Custom UI block`
-        blocks.other.push(blockInfo)
-      }
-    }
-
-    // Sort blocks within each category
-    Object.keys(blocks).forEach(key => {
-      blocks[key].sort((a: any, b: any) => a.name.localeCompare(b.name))
-    })
-
-    // Filter by category if specified
-    if (category) {
-      const categoryLower = category.toLowerCase()
-      if (blocks[categoryLower]) {
-        return {
-          category,
-          blocks: blocks[categoryLower],
-          total: blocks[categoryLower].length,
-          description: `${category.charAt(0).toUpperCase() + category.slice(1)} blocks available in shadcn/ui v4`,
-          usage: `Use 'get_block' tool with the block name to get the full source code and implementation details.`,
-        }
-      } else {
-        return {
-          category,
-          blocks: [],
-          total: 0,
-          availableCategories: Object.keys(blocks).filter(key => blocks[key].length > 0),
-          suggestion: `Category '${category}' not found. Available categories: ${Object.keys(blocks)
-            .filter(key => blocks[key].length > 0)
-            .join(", ")}`,
+    if (Array.isArray(response.data)) {
+      for (const item of response.data) {
+        if (item.type === "file" && item.name.endsWith(".vue")) {
+          allBlocks.push({
+            name: item.name.replace(".vue", ""),
+            type: "simple",
+            path: item.path,
+            size: item.size || 0,
+            lastModified: "Available",
+          })
+        } else if (item.type === "dir") {
+          allBlocks.push({
+            name: item.name,
+            type: "complex",
+            path: item.path,
+            lastModified: "Directory",
+          })
         }
       }
     }
-
-    // Calculate totals
-    const totalBlocks = Object.values(blocks).flat().length
-    const nonEmptyCategories = Object.keys(blocks).filter(key => blocks[key].length > 0)
-
-    return {
-      categories: blocks,
-      totalBlocks,
-      availableCategories: nonEmptyCategories,
-      summary: Object.keys(blocks).reduce((acc: any, key) => {
-        if (blocks[key].length > 0) {
-          acc[key] = blocks[key].length
-        }
-        return acc
-      }, {}),
-      usage: "Use 'get_block' tool with a specific block name to get full source code and implementation details.",
-      examples: nonEmptyCategories
-        .slice(0, 3)
-        .map(cat => (blocks[cat][0] ? `${cat}: ${blocks[cat][0].name}` : ""))
-        .filter(Boolean),
-    }
-  } catch (error: any) {
-    if (error.response?.status === 404) {
-      throw new Error("Blocks directory not found in the v4 registry")
-    }
-    throw error
+  } catch (error) {
+    throw new Error("No blocks found in Vue registry (v4)")
   }
+
+  // Categorize blocks by simple heuristics
+  const blocks: any = {
+    calendar: [],
+    dashboard: [],
+    login: [],
+    sidebar: [],
+    products: [],
+    authentication: [],
+    charts: [],
+    mail: [],
+    music: [],
+    other: [],
+  }
+
+  for (const block of allBlocks) {
+    if (block.name.includes("calendar")) {
+      block.description = "Calendar component for date selection and scheduling"
+      blocks.calendar.push(block)
+    } else if (block.name.includes("dashboard")) {
+      block.description = "Dashboard layout with charts, metrics, and data display"
+      blocks.dashboard.push(block)
+    } else if (block.name.includes("login") || block.name.includes("signin")) {
+      block.description = "Authentication and login interface"
+      blocks.login.push(block)
+    } else if (block.name.includes("sidebar")) {
+      block.description = "Navigation sidebar component"
+      blocks.sidebar.push(block)
+    } else if (block.name.includes("products") || block.name.includes("ecommerce")) {
+      block.description = "Product listing and e-commerce components"
+      blocks.products.push(block)
+    } else if (block.name.includes("auth")) {
+      block.description = "Authentication related components"
+      blocks.authentication.push(block)
+    } else if (block.name.includes("chart") || block.name.includes("graph")) {
+      block.description = "Data visualization and chart components"
+      blocks.charts.push(block)
+    } else if (block.name.includes("mail") || block.name.includes("email")) {
+      block.description = "Email and mail interface components"
+      blocks.mail.push(block)
+    } else if (block.name.includes("music") || block.name.includes("player")) {
+      block.description = "Music player and media components"
+      blocks.music.push(block)
+    } else {
+      block.description = `${block.name} - Custom Vue UI block`
+      blocks.other.push(block)
+    }
+  }
+
+  // Sort blocks within each category
+  Object.keys(blocks).forEach(key => {
+    blocks[key].sort((a: any, b: any) => a.name.localeCompare(b.name))
+  })
+
+  // Filter by category if specified
+  if (category) {
+    const categoryLower = category.toLowerCase()
+    if (blocks[categoryLower]) {
+      return {
+        category,
+        blocks: blocks[categoryLower],
+        total: blocks[categoryLower].length,
+        description: `${category.charAt(0).toUpperCase() + category.slice(1)} blocks available in shadcn-vue v4`,
+        usage: `Use 'get_block' tool with the block name to get the full source code and implementation details.`,
+      }
+    } else {
+      return {
+        category,
+        blocks: [],
+        total: 0,
+        availableCategories: Object.keys(blocks).filter(key => blocks[key].length > 0),
+        suggestion: `Category '${category}' not found. Available categories: ${Object.keys(blocks)
+          .filter(key => blocks[key].length > 0)
+          .join(", ")}`,
+      }
+    }
+  }
+
+  // Calculate totals
+  const totalBlocks = Object.values(blocks).flat().length
+  const nonEmptyCategories = Object.keys(blocks).filter(key => blocks[key].length > 0)
+
+  return {
+    categories: blocks,
+    totalBlocks,
+    availableCategories: nonEmptyCategories,
+    summary: Object.keys(blocks).reduce((acc: any, key) => {
+      if (blocks[key].length > 0) {
+        acc[key] = blocks[key].length
+      }
+      return acc
+    }, {}),
+    usage: "Use 'get_block' tool with a specific block name to get full source code and implementation details.",
+    examples: nonEmptyCategories
+      .slice(0, 3)
+      .map(cat => (blocks[cat][0] ? `${cat}: ${blocks[cat][0].name}` : ""))
+      .filter(Boolean),
+  }
+  // } catch (error: any) {
+  //   if (error.response?.status === 404) {
+  //     throw new Error("Blocks directory not found in the v4 registry")
+  //   }
+  //   throw error
+  // }
 }
 
 /**
@@ -873,8 +916,11 @@ export const axios = {
     REPO_OWNER,
     REPO_NAME,
     REPO_BRANCH,
-    V4_BASE_PATH,
+    APPS_V4_PATH,
     REGISTRY_PATH,
     NEW_YORK_V4_PATH,
+    UI_PATH,
+    BLOCKS_PATH,
+    DEMOS_PATH,
   },
 }

@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 /**
- * Shadcn UI v4 MCP Server
+ * Shadcn Vue v4 MCP Server
  *
- * A Model Context Protocol server for shadcn/ui v4 components.
+ * A Model Context Protocol server for shadcn-vue v4 components.
  * Provides AI assistants with access to component source code, demos, blocks, and metadata.
  *
  * Usage:
